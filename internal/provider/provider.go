@@ -100,6 +100,7 @@ func (p *pangolinProvider) Resources(ctx context.Context) []func() resource.Reso
 	return []func() resource.Resource{
 		NewOrganizationResource,
 		NewDomainResource,
+		NewSiteResource,
 	}
 }
 
@@ -107,5 +108,6 @@ func (p *pangolinProvider) DataSources(ctx context.Context) []func() datasource.
 	return []func() datasource.DataSource{
 		NewOrganizationDataSource,
 		NewDomainDataSource,
+		NewSiteDataSource,
 	}
 }
