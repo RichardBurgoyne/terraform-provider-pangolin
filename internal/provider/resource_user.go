@@ -3,9 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -17,10 +15,7 @@ import (
 	"github.com/RichardBurgoyne/terraform-provider-pangolin/internal/client"
 )
 
-var (
-	_ resource.Resource                = &userResource{}
-	_ resource.ResourceWithImportState = &userResource{}
-)
+var _ resource.Resource = &userResource{}
 
 func NewUserResource() resource.Resource { return &userResource{} }
 
@@ -46,7 +41,7 @@ func (r *userResource) Metadata(ctx context.Context, req resource.MetadataReques
 func (r *userResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replace := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing. Import using the format `<org_id>:<user_id>`, e.g. `terraform import pangolin_user.example acme:u1`.",
+		Description: "Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing. Import is not supported: GetOrgUser cannot recover email, idp_id, or role_ids, so an imported user would show a forced replacement on the very next plan.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":           schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this user belongs to."},
 			"user_id":          schema.StringAttribute{Computed: true, Description: "Server-generated user ID."},
@@ -219,21 +214,5 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 	if err := r.client.DeleteOrgUser(ctx, state.OrgID.ValueString(), state.UserID.ValueString()); err != nil {
 		resp.Diagnostics.AddError("Error deleting user", err.Error())
-	}
-}
-
-func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<user_id>, e.g. "acme:u1"`)
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), parts[1])...)
-	if resp.Diagnostics.HasError() {
-		return
 	}
 }

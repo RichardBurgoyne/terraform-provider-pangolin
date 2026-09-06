@@ -175,8 +175,9 @@ func (r *domainResource) Read(ctx context.Context, req resource.ReadRequest, res
 }
 
 func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan domainResourceModel
+	var plan, state domainResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -187,14 +188,21 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 		updateIn.PreferWildcardCert = &v
 	}
 
-	domain, err := r.client.UpdateDomain(ctx, plan.OrgID.ValueString(), plan.DomainID.ValueString(), updateIn)
+	// domain_id is Computed-only (never Optional), so its planned value goes
+	// Unknown whenever any other attribute changes unless read from state,
+	// which always carries the concrete, already-known ID forward.
+	domain, err := r.client.UpdateDomain(ctx, state.OrgID.ValueString(), state.DomainID.ValueString(), updateIn)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating domain", err.Error())
 		return
 	}
 
+	plan.DomainID = state.DomainID
 	plan.CertResolver = types.StringValue(domain.CertResolver)
 	plan.PreferWildcardCert = types.BoolValue(domain.PreferWildcardCert)
+	// verified is Computed-only and untouched by this API call; carry the
+	// last-known value forward rather than leaving it Unknown.
+	plan.Verified = state.Verified
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
