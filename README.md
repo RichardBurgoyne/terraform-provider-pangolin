@@ -50,6 +50,19 @@ for this repo, add its armored private key and passphrase as the
 key to the Terraform Registry publisher settings so the registry can
 verify signed releases.
 
+## Roadmap (v0.1.0 Deferrals)
+
+The following features are planned for v1.x:
+
+- Raw TCP/UDP resource modes (currently HTTP, SSH, RDP, VNC only)
+- Inference mode (AI gateway resources)
+- Target health checks
+- Fine-grained SSH sudo command/group lists
+- Internal (password-based) user support
+- User role removal capability
+
+See individual resource documentation in [docs/](./docs/) for details on each deferral.
+
 ## License
 
 This project is licensed under the Mozilla Public License Version 2.0. See the [LICENSE](./LICENSE) file for details.

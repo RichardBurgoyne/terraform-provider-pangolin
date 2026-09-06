@@ -27,13 +27,13 @@ func (d *domainDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Description: "Look up an existing domain by org_id and domain_id.",
 		Attributes: map[string]schema.Attribute{
-			"org_id":                schema.StringAttribute{Required: true},
-			"domain_id":             schema.StringAttribute{Required: true},
-			"type":                  schema.StringAttribute{Computed: true},
-			"base_domain":           schema.StringAttribute{Computed: true},
-			"cert_resolver":         schema.StringAttribute{Computed: true},
-			"prefer_wildcard_cert":  schema.BoolAttribute{Computed: true},
-			"verified":              schema.BoolAttribute{Computed: true},
+			"org_id":               schema.StringAttribute{Required: true},
+			"domain_id":            schema.StringAttribute{Required: true},
+			"type":                 schema.StringAttribute{Computed: true},
+			"base_domain":          schema.StringAttribute{Computed: true},
+			"cert_resolver":        schema.StringAttribute{Computed: true},
+			"prefer_wildcard_cert": schema.BoolAttribute{Computed: true},
+			"verified":             schema.BoolAttribute{Computed: true},
 		},
 	}
 }

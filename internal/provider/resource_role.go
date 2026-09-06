@@ -44,9 +44,9 @@ func (r *roleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		Description: "Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Note: org_id must already be set in config before terraform import, since there is no way to derive the organization from a role ID alone.",
 		Attributes: map[string]schema.Attribute{
-			"org_id":  schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Organization ID this role belongs to."},
-			"role_id": schema.Int64Attribute{Computed: true, Description: "Server-generated role ID."},
-			"name":    schema.StringAttribute{Required: true, Description: "Role name, unique per org."},
+			"org_id":                  schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Organization ID this role belongs to."},
+			"role_id":                 schema.Int64Attribute{Computed: true, Description: "Server-generated role ID."},
+			"name":                    schema.StringAttribute{Required: true, Description: "Role name, unique per org."},
 			"description":             schema.StringAttribute{Optional: true, Computed: true, Description: "Role description."},
 			"require_device_approval": schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether devices used by members of this role require approval."},
 			"allow_ssh":               schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether members of this role can sign SSH keys."},

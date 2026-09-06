@@ -42,12 +42,12 @@ func (r *apiKeyResource) Schema(ctx context.Context, req resource.SchemaRequest,
 	resp.Schema = schema.Schema{
 		Description: "Manages an organization-scoped Pangolin API key. The secret key value is only ever available at creation time.",
 		Attributes: map[string]schema.Attribute{
-			"org_id":      schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Organization ID this key belongs to."},
-			"api_key_id":  schema.StringAttribute{Computed: true, Description: "Server-generated key ID."},
-			"name":        schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Display name for the key."},
-			"api_key":     schema.StringAttribute{Computed: true, Sensitive: true, Description: "The secret key value. Only ever populated from the create response; not recoverable afterward."},
-			"last_chars":  schema.StringAttribute{Computed: true, Description: "Last 4 characters of the key, for identification."},
-			"action_ids":  schema.ListAttribute{Optional: true, Computed: true, ElementType: types.StringType, Description: "Actions this key is permitted to perform. Replaces the full list on every change."},
+			"org_id":     schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Organization ID this key belongs to."},
+			"api_key_id": schema.StringAttribute{Computed: true, Description: "Server-generated key ID."},
+			"name":       schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Display name for the key."},
+			"api_key":    schema.StringAttribute{Computed: true, Sensitive: true, Description: "The secret key value. Only ever populated from the create response; not recoverable afterward."},
+			"last_chars": schema.StringAttribute{Computed: true, Description: "Last 4 characters of the key, for identification."},
+			"action_ids": schema.ListAttribute{Optional: true, Computed: true, ElementType: types.StringType, Description: "Actions this key is permitted to perform. Replaces the full list on every change."},
 		},
 	}
 }

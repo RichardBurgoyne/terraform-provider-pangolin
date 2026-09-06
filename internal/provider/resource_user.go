@@ -47,13 +47,13 @@ func (r *userResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		Description: "Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing.",
 		Attributes: map[string]schema.Attribute{
-			"org_id":    schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this user belongs to."},
-			"user_id":   schema.StringAttribute{Computed: true, Description: "Server-generated user ID."},
-			"username":  schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Username, lowercased server-side."},
-			"email":     schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Email address."},
-			"name":      schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Display name."},
-			"idp_id":    schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Numeric ID of the OIDC identity provider this user authenticates through."},
-			"role_ids":  schema.ListAttribute{Required: true, ElementType: types.Int64Type, Description: "Role IDs to grant. Can only grow after creation (see resource description)."},
+			"org_id":           schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this user belongs to."},
+			"user_id":          schema.StringAttribute{Computed: true, Description: "Server-generated user ID."},
+			"username":         schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Username, lowercased server-side."},
+			"email":            schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Email address."},
+			"name":             schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Display name."},
+			"idp_id":           schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Numeric ID of the OIDC identity provider this user authenticates through."},
+			"role_ids":         schema.ListAttribute{Required: true, ElementType: types.Int64Type, Description: "Role IDs to grant. Can only grow after creation (see resource description)."},
 			"auto_provisioned": schema.BoolAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}, Description: "Whether this user was auto-provisioned."},
 		},
 	}
