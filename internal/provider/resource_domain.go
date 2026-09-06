@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -42,7 +43,7 @@ func (r *domainResource) Metadata(ctx context.Context, req resource.MetadataRequ
 func (r *domainResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replace := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Manages a domain attached to a Pangolin organization. type and base_domain are immutable after creation.",
+		Description: "Manages a domain attached to a Pangolin organization. type and base_domain are immutable after creation. Import using the format `<org_id>:<domain_id>`, e.g. `terraform import pangolin_domain.example acme:d1`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id": schema.StringAttribute{
 				Required:      true,
@@ -120,6 +121,21 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	domain, err := r.client.GetDomain(ctx, plan.OrgID.ValueString(), created.DomainID)
 	if err != nil {
+		// The domain was created server-side, so record its ID before failing.
+		// Without this the domain would be orphaned with no Terraform record.
+		// The next apply refreshes the remaining attributes. Any still-unknown
+		// computed value is written as null, since state may not hold unknowns.
+		plan.DomainID = types.StringValue(created.DomainID)
+		if plan.CertResolver.IsUnknown() {
+			plan.CertResolver = types.StringNull()
+		}
+		if plan.PreferWildcardCert.IsUnknown() {
+			plan.PreferWildcardCert = types.BoolNull()
+		}
+		if plan.Verified.IsUnknown() {
+			plan.Verified = types.BoolNull()
+		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		resp.Diagnostics.AddError("Error reading newly created domain", err.Error())
 		return
 	}
@@ -194,5 +210,17 @@ func (r *domainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 func (r *domainResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("domain_id"), req, resp)
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<domain_id>, e.g. "acme:d1"`)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain_id"), parts[1])...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

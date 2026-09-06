@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -51,7 +52,7 @@ func (r *pangolinResourceResource) Metadata(ctx context.Context, req resource.Me
 func (r *pangolinResourceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replace := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Manages a Pangolin HTTP/SSH/RDP/VNC resource (a proxied endpoint). Raw TCP/UDP resources and inference-mode (AI gateway) resources are not yet supported by this provider. mode and domain_id changes replace the resource.",
+		Description: "Manages a Pangolin HTTP/SSH/RDP/VNC resource (a proxied endpoint). Raw TCP/UDP resources and inference-mode (AI gateway) resources are not yet supported by this provider. mode and domain_id changes replace the resource. Import using the format `<org_id>:<resource_id>`, e.g. `terraform import pangolin_resource.example acme:5`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":      schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this resource belongs to."},
 			"resource_id": schema.Int64Attribute{Computed: true, Description: "Server-generated resource ID."},
@@ -66,9 +67,9 @@ func (r *pangolinResourceResource) Schema(ctx context.Context, req resource.Sche
 			"subdomain":        schema.StringAttribute{Optional: true, Computed: true, Description: "Subdomain under domain_id."},
 			"full_domain":      schema.StringAttribute{Computed: true, Description: "Fully-qualified domain this resource is reachable at."},
 			"sticky_session":   schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether to enable sticky sessions."},
-			"post_auth_path":   schema.StringAttribute{Optional: true, Description: "Path to redirect to after authentication."},
-			"pam_mode":         schema.StringAttribute{Optional: true, Description: "SSH PAM mode: passthrough or push. Only meaningful for mode = ssh."},
-			"auth_daemon_mode": schema.StringAttribute{Optional: true, Description: "One of site, remote, native. Only meaningful for mode = ssh."},
+			"post_auth_path":   schema.StringAttribute{Optional: true, Computed: true, Description: "Path to redirect to after authentication."},
+			"pam_mode":         schema.StringAttribute{Optional: true, Computed: true, Description: "SSH PAM mode: passthrough or push. Only meaningful for mode = ssh."},
+			"auth_daemon_mode": schema.StringAttribute{Optional: true, Computed: true, Description: "One of site, remote, native. Only meaningful for mode = ssh."},
 			"auth_daemon_port": schema.Int64Attribute{Optional: true, Description: "Auth daemon port. Only meaningful for mode = ssh."},
 			"enabled":          schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether the resource is enabled."},
 			"ssl":              schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether SSL is enabled."},
@@ -208,12 +209,24 @@ func (r *pangolinResourceResource) Delete(ctx context.Context, req resource.Dele
 }
 
 func (r *pangolinResourceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	id, err := strconv.ParseInt(req.ID, 10, 64)
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<resource_id>, e.g. "acme:5"`)
+		return
+	}
+	id, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid Import ID", "resource_id must be a numeric ID: "+err.Error())
 		return
 	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), id)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.PangolinResource) {

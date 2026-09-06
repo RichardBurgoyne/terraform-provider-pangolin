@@ -75,6 +75,12 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 		return fmt.Errorf("reading response body: %w", err)
 	}
 
+	// A success status with no body (e.g. 204 No Content on a DELETE) has no
+	// envelope to inspect, so accept it before the envelope-based checks below.
+	if resp.StatusCode < 300 && len(raw) == 0 {
+		return nil
+	}
+
 	var env envelope
 	if len(raw) > 0 {
 		if unmarshalErr := json.Unmarshal(raw, &env); unmarshalErr != nil {

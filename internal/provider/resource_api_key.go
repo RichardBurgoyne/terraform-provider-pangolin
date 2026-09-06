@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -40,7 +41,7 @@ func (r *apiKeyResource) Metadata(ctx context.Context, req resource.MetadataRequ
 
 func (r *apiKeyResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages an organization-scoped Pangolin API key. The secret key value is only ever available at creation time.",
+		Description: "Manages an organization-scoped Pangolin API key. The secret key value is only ever available at creation time. Import using the format `<org_id>:<api_key_id>`, e.g. `terraform import pangolin_api_key.example acme:k1` (the secret key value cannot be recovered by import).",
 		Attributes: map[string]schema.Attribute{
 			"org_id":     schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Organization ID this key belongs to."},
 			"api_key_id": schema.StringAttribute{Computed: true, Description: "Server-generated key ID."},
@@ -89,6 +90,12 @@ func (r *apiKeyResource) Create(ctx context.Context, req resource.CreateRequest,
 			return
 		}
 		if err := r.client.SetAPIKeyActions(ctx, orgID, key.APIKeyID, actionIDs); err != nil {
+			// The key itself was created and its secret is only ever returned
+			// once, so persist what we know before failing. Without this the
+			// key would exist server-side with its secret lost forever. The
+			// next apply reconciles the actions, which were not set.
+			plan.ActionIDs = types.ListValueMust(types.StringType, nil)
+			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 			resp.Diagnostics.AddError("Error setting API key actions", err.Error())
 			return
 		}
@@ -175,5 +182,17 @@ func (r *apiKeyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 func (r *apiKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("api_key_id"), req, resp)
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<api_key_id>, e.g. "acme:k1"`)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("api_key_id"), parts[1])...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

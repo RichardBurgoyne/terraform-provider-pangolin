@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -42,7 +43,7 @@ func (r *roleResource) Metadata(ctx context.Context, req resource.MetadataReques
 
 func (r *roleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Note: org_id must already be set in config before terraform import, since there is no way to derive the organization from a role ID alone.",
+		Description: "Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Import using the format `<org_id>:<role_id>`, e.g. `terraform import pangolin_role.example acme:5`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":                  schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Organization ID this role belongs to."},
 			"role_id":                 schema.Int64Attribute{Computed: true, Description: "Server-generated role ID."},
@@ -155,7 +156,12 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
+	// org_id is RequiresReplace, so plan and state always agree here. The
+	// update response may not echo orgId back, and setRoleModelFromAPI writes
+	// it unconditionally, so preserve the known-good value across the call.
+	orgID := plan.OrgID
 	setRoleModelFromAPI(&plan, role)
+	plan.OrgID = orgID
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -171,12 +177,24 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 }
 
 func (r *roleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	id, err := strconv.ParseInt(req.ID, 10, 64)
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<role_id>, e.g. "acme:5"`)
+		return
+	}
+	id, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid Import ID", "role_id must be a numeric ID: "+err.Error())
 		return
 	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_id"), id)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func setRoleModelFromAPI(model *roleResourceModel, role *client.Role) {

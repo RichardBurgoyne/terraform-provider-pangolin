@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -45,7 +46,7 @@ func (r *userResource) Metadata(ctx context.Context, req resource.MetadataReques
 func (r *userResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replace := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing.",
+		Description: "Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing. Import using the format `<org_id>:<user_id>`, e.g. `terraform import pangolin_user.example acme:u1`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":           schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this user belongs to."},
 			"user_id":          schema.StringAttribute{Computed: true, Description: "Server-generated user ID."},
@@ -103,7 +104,20 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	// username to learn its server-generated ID.
 	user, err := r.client.GetUserByUsername(ctx, orgID, plan.Username.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error looking up newly created user", err.Error())
+		// CreateOrgUser succeeded, so a user very likely exists server-side
+		// under this username. Unlike the other resources there is no ID to
+		// write to state here: discovering the ID is precisely what this
+		// lookup does, so nothing can be persisted and the object is left
+		// untracked. Say so explicitly rather than reporting a bare error.
+		resp.Diagnostics.AddError(
+			"Error looking up newly created user",
+			fmt.Sprintf(
+				"%s\n\nThe user may have been created successfully server-side under username %q but could not be looked up to record in state. "+
+					"Check the Pangolin dashboard before retrying: if the user exists, import it with `terraform import` once you have its ID, "+
+					"since retrying the apply may attempt to create a duplicate.",
+				err.Error(), plan.Username.ValueString(),
+			),
+		)
 		return
 	}
 
@@ -209,5 +223,17 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 }
 
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("user_id"), req, resp)
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<user_id>, e.g. "acme:u1"`)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), parts[1])...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

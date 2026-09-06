@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -49,7 +50,7 @@ func (r *targetResource) Metadata(ctx context.Context, req resource.MetadataRequ
 func (r *targetResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replaceInt := []planmodifier.Int64{int64planmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Manages a backend target on a Pangolin resource. Health checks are not yet supported by this provider.",
+		Description: "Manages a backend target on a Pangolin resource. Health checks are not yet supported by this provider. Import using the format `<resource_id>:<target_id>`, e.g. `terraform import pangolin_target.example 5:9`.",
 		Attributes: map[string]schema.Attribute{
 			"resource_id":       schema.Int64Attribute{Required: true, PlanModifiers: replaceInt, Description: "Resource ID this target belongs to."},
 			"target_id":         schema.Int64Attribute{Computed: true, Description: "Server-generated target ID."},
@@ -229,12 +230,29 @@ func (r *targetResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 func (r *targetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	id, err := strconv.ParseInt(req.ID, 10, 64)
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <resource_id>:<target_id>, e.g. "5:9"`)
+		return
+	}
+	resourceID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Import ID", "resource_id must be a numeric ID: "+err.Error())
+		return
+	}
+	targetID, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid Import ID", "target_id must be a numeric ID: "+err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("target_id"), id)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), resourceID)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("target_id"), targetID)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func setTargetModelFromAPI(model *targetResourceModel, target *client.Target) {

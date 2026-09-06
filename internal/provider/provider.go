@@ -51,7 +51,7 @@ func (p *pangolinProvider) Schema(ctx context.Context, req provider.SchemaReques
 			},
 			"org_id": schema.StringAttribute{
 				Optional:    true,
-				Description: "Default organization ID used by resources that don't set org_id explicitly. Defaults to the PANGOLIN_ORG_ID environment variable.",
+				Description: "Organization ID. Currently informational only: it is not used as a fallback by any resource or data source, and every resource that operates within an organization requires its own org_id attribute.",
 			},
 		},
 	}

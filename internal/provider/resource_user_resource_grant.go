@@ -75,6 +75,12 @@ func (r *userResourceGrantResource) Read(ctx context.Context, req resource.ReadR
 
 	userIDs, err := r.client.ListResourceUsers(ctx, state.ResourceID.ValueInt64())
 	if err != nil {
+		// A 404 here means the parent resource is gone, which means the grant
+		// is gone too. Treat it as a removal rather than a hard refresh error.
+		if client.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading resource users", err.Error())
 		return
 	}
