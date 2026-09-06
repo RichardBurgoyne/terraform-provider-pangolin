@@ -6,3 +6,9 @@ terraform-provider-pangolin_v*
 crash.log
 .DS_Store
 dist/
+
+# Internal planning artifacts and local tooling state (not part of the
+# published provider or its registry-rendered docs).
+docs/superpowers/
+.superpowers/
+.claude/
