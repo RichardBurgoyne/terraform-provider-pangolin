@@ -103,6 +103,7 @@ func (p *pangolinProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewSiteResource,
 		NewPangolinResourceResource,
 		NewTargetResource,
+		NewRoleResource,
 	}
 }
 
@@ -112,5 +113,6 @@ func (p *pangolinProvider) DataSources(ctx context.Context) []func() datasource.
 		NewDomainDataSource,
 		NewSiteDataSource,
 		NewPangolinResourceDataSource,
+		NewRoleDataSource,
 	}
 }
