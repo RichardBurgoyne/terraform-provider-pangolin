@@ -13,7 +13,7 @@ func TestCreateTarget(t *testing.T) {
 		if r.Method != http.MethodPut || r.URL.Path != "/resource/5/target" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    map[string]any{"targetId": float64(9), "siteId": float64(1), "ip": "10.0.0.5", "port": float64(80), "enabled": true},
 			"success": true,
 		})
@@ -35,7 +35,7 @@ func TestDeleteTarget(t *testing.T) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/target/9" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
 	}))
 	defer server.Close()
 

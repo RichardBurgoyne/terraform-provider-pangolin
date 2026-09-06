@@ -14,7 +14,7 @@ func TestDo_SetsAuthHeaderAndUnwrapsEnvelope(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    map[string]any{"name": "hello"},
 			"success": true,
 			"error":   false,
@@ -44,7 +44,7 @@ func TestDo_SetsAuthHeaderAndUnwrapsEnvelope(t *testing.T) {
 func TestDo_ReturnsAPIErrorOnFailure(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    nil,
 			"success": false,
 			"error":   true,

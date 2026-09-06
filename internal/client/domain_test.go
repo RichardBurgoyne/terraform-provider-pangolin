@@ -13,7 +13,7 @@ func TestCreateDomain(t *testing.T) {
 		if r.Method != http.MethodPut || r.URL.Path != "/org/acme/domain" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    map[string]any{"domainId": "d1"},
 			"success": true,
 		})
@@ -35,7 +35,7 @@ func TestGetDomain(t *testing.T) {
 		if r.Method != http.MethodGet || r.URL.Path != "/org/acme/domain/d1" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    map[string]any{"domainId": "d1", "baseDomain": "example.com", "type": "wildcard", "verified": true},
 			"success": true,
 		})
@@ -57,7 +57,7 @@ func TestDeleteDomain(t *testing.T) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/org/acme/domain/d1" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
 	}))
 	defer server.Close()
 

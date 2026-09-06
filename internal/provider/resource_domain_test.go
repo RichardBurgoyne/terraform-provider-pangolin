@@ -37,7 +37,7 @@ func TestDomainResource_Update_UsesStateDomainID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    map[string]any{"domainId": "dom-1", "certResolver": "letsencrypt", "preferWildcardCert": false},
 			"success": true,
 		})

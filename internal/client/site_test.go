@@ -14,7 +14,7 @@ func TestCreateSite(t *testing.T) {
 		if r.Method != http.MethodPut || r.URL.Path != "/org/acme/site" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data": map[string]any{
 				"siteId": float64(1), "niceId": "site-1", "name": "Site 1", "type": "newt",
 				"newtId": "newt-abc", "secret": "shh",
@@ -39,7 +39,7 @@ func TestUpdateSite(t *testing.T) {
 		if r.Method != http.MethodPost || r.URL.Path != "/site/1" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    map[string]any{"siteId": float64(1), "name": "Renamed", "type": "newt"},
 			"success": true,
 		})
@@ -62,7 +62,7 @@ func TestDeleteSite(t *testing.T) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/site/1" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
 	}))
 	defer server.Close()
 

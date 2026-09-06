@@ -14,7 +14,7 @@ func TestCreateOrganization(t *testing.T) {
 		if r.Method != http.MethodPut || r.URL.Path != "/org" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data": map[string]any{
 				"orgId": "acme", "name": "Acme", "subnet": "10.0.0.0/24", "utilitySubnet": "10.0.1.0/24",
 			},
@@ -40,7 +40,7 @@ func TestGetOrganization_UnwrapsOrgWrapper(t *testing.T) {
 		if r.Method != http.MethodGet || r.URL.Path != "/org/acme" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data": map[string]any{
 				"org": map[string]any{
 					"orgId": "acme", "name": "Acme", "subnet": "10.0.0.0/24", "utilitySubnet": "10.0.1.0/24",
@@ -66,7 +66,7 @@ func TestDeleteOrganization(t *testing.T) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/org/acme" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
 	}))
 	defer server.Close()
 

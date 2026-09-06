@@ -13,7 +13,7 @@ func TestCreateResource(t *testing.T) {
 		if r.Method != http.MethodPut || r.URL.Path != "/org/acme/resource" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data": map[string]any{
 				"resourceId": float64(5), "niceId": "res-1", "name": "Res 1", "mode": "http",
 				"domainId": "d1", "fullDomain": "res-1.example.com", "enabled": true, "ssl": true,
@@ -38,7 +38,7 @@ func TestDeleteResource(t *testing.T) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/resource/5" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
 	}))
 	defer server.Close()
 

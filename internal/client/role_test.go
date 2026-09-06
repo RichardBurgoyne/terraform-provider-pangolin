@@ -13,7 +13,7 @@ func TestCreateRole(t *testing.T) {
 		if r.Method != http.MethodPut || r.URL.Path != "/org/acme/role" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    map[string]any{"roleId": float64(3), "orgId": "acme", "name": "Editors"},
 			"success": true,
 		})
@@ -35,7 +35,7 @@ func TestGetRoleByID_FiltersListRoles(t *testing.T) {
 		if r.Method != http.MethodGet || r.URL.Path != "/org/acme/roles" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data": map[string]any{
 				"roles": []map[string]any{
 					{"roleId": float64(3), "orgId": "acme", "name": "Editors"},
@@ -66,7 +66,7 @@ func TestDeleteRole(t *testing.T) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/role/3" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
 	}))
 	defer server.Close()
 

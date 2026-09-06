@@ -13,7 +13,7 @@ func TestCreateAPIKey(t *testing.T) {
 		if r.Method != http.MethodPut || r.URL.Path != "/org/acme/api-key" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    map[string]any{"apiKeyId": "k1", "name": "ci", "apiKey": "secret-value", "lastChars": "alue", "createdAt": "2026-01-01T00:00:00Z"},
 			"success": true,
 		})
@@ -35,7 +35,7 @@ func TestSetAPIKeyActions(t *testing.T) {
 		if r.Method != http.MethodPost || r.URL.Path != "/org/acme/api-key/k1/actions" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
 	}))
 	defer server.Close()
 
@@ -50,7 +50,7 @@ func TestDeleteAPIKey(t *testing.T) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/org/acme/api-key/k1" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
 	}))
 	defer server.Close()
 

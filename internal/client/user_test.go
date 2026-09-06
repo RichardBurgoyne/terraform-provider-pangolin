@@ -12,9 +12,9 @@ func TestCreateOrgUser_ThenLookUpByUsername(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPut && r.URL.Path == "/org/acme/user":
-			json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
 		case r.Method == http.MethodGet && r.URL.Path == "/org/acme/users":
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"data":    map[string]any{"users": []map[string]any{{"userId": "u1", "username": "jane", "type": "oidc"}}},
 				"success": true,
 			})
@@ -43,7 +43,7 @@ func TestAddUserRole(t *testing.T) {
 		if r.Method != http.MethodPost || r.URL.Path != "/role/2/add/u1" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
 	}))
 	defer server.Close()
 
@@ -58,7 +58,7 @@ func TestDeleteOrgUser(t *testing.T) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/org/acme/user/u1" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
 	}))
 	defer server.Close()
 

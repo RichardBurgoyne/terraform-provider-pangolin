@@ -13,7 +13,7 @@ func TestAddUserToResource(t *testing.T) {
 		if r.Method != http.MethodPost || r.URL.Path != "/resource/5/users/add" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
 	}))
 	defer server.Close()
 
@@ -25,7 +25,7 @@ func TestAddUserToResource(t *testing.T) {
 
 func TestListResourceUsers_ContainsGrantedUser(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"data":    map[string]any{"users": []map[string]any{{"userId": "u1"}}},
 			"success": true,
 		})
@@ -47,7 +47,7 @@ func TestRemoveUserFromResource(t *testing.T) {
 		if r.Method != http.MethodPost || r.URL.Path != "/resource/5/users/remove" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
-		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{}, "success": true})
 	}))
 	defer server.Close()
 
