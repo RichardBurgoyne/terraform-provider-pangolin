@@ -37,6 +37,19 @@ make fmt      # Format code
 
 See the [GNUmakefile](./GNUmakefile) for all available targets.
 
+## Releasing
+
+1. Merge everything intended for the release into `main`.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`
+3. The Release workflow builds, signs, and publishes to GitHub Releases.
+   `test:` commits are excluded from the generated changelog.
+
+First-time setup (once, by the repo owner): generate a dedicated GPG key
+for this repo, add its armored private key and passphrase as the
+`GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` repo secrets, and upload the public
+key to the Terraform Registry publisher settings so the registry can
+verify signed releases.
+
 ## License
 
 This project is licensed under the Mozilla Public License Version 2.0. See the [LICENSE](./LICENSE) file for details.

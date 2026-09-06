@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛒
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Release 🚀
+        uses: RichardBurgoyne/reusable-workflows/.github/actions/go-provider-release@v1.2
+        with:
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
