@@ -3,12 +3,12 @@
 page_title: "pangolin_resource Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages a Pangolin HTTP/SSH/RDP/VNC resource (a proxied endpoint). Raw TCP/UDP resources and inference-mode (AI gateway) resources are not yet supported by this provider. mode and domain_id changes replace the resource.
+  Manages a Pangolin HTTP/SSH/RDP/VNC resource (a proxied endpoint). Raw TCP/UDP resources and inference-mode (AI gateway) resources are not yet supported by this provider. mode and domain_id changes replace the resource. Import using the format <org_id>:<resource_id>, e.g. terraform import pangolin_resource.example acme:5.
 ---
 
 # pangolin_resource (Resource)
 
-Manages a Pangolin HTTP/SSH/RDP/VNC resource (a proxied endpoint). Raw TCP/UDP resources and inference-mode (AI gateway) resources are not yet supported by this provider. mode and domain_id changes replace the resource.
+Manages a Pangolin HTTP/SSH/RDP/VNC resource (a proxied endpoint). Raw TCP/UDP resources and inference-mode (AI gateway) resources are not yet supported by this provider. mode and domain_id changes replace the resource. Import using the format `<org_id>:<resource_id>`, e.g. `terraform import pangolin_resource.example acme:5`.
 
 ## Example Usage
 

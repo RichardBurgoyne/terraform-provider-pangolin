@@ -3,12 +3,12 @@
 page_title: "pangolin_site Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, and auto_update_override_org can be updated after creation; every other attribute replaces the site if changed.
+  Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, and auto_update_override_org can be updated after creation; every other attribute replaces the site if changed. Import using the format <org_id>:<site_id>, e.g. terraform import pangolin_site.example acme:5.
 ---
 
 # pangolin_site (Resource)
 
-Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, and auto_update_override_org can be updated after creation; every other attribute replaces the site if changed.
+Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, and auto_update_override_org can be updated after creation; every other attribute replaces the site if changed. Import using the format `<org_id>:<site_id>`, e.g. `terraform import pangolin_site.example acme:5`.
 
 ## Example Usage
 

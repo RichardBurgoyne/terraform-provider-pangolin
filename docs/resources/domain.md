@@ -3,12 +3,12 @@
 page_title: "pangolin_domain Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages a domain attached to a Pangolin organization. type and base_domain are immutable after creation.
+  Manages a domain attached to a Pangolin organization. type and base_domain are immutable after creation. Import using the format <org_id>:<domain_id>, e.g. terraform import pangolin_domain.example acme:d1.
 ---
 
 # pangolin_domain (Resource)
 
-Manages a domain attached to a Pangolin organization. type and base_domain are immutable after creation.
+Manages a domain attached to a Pangolin organization. type and base_domain are immutable after creation. Import using the format `<org_id>:<domain_id>`, e.g. `terraform import pangolin_domain.example acme:d1`.
 
 ## Example Usage
 

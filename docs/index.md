@@ -18,4 +18,4 @@ Interact with a self-hosted or cloud Pangolin instance.
 
 - `api_key` (String, Sensitive) Bearer API key (organization or root scoped). Defaults to the PANGOLIN_API_KEY environment variable.
 - `endpoint` (String) Base URL of the Pangolin integration API, including any version prefix your instance uses (e.g. https://pangolin.example.com/v1). Defaults to the PANGOLIN_ENDPOINT environment variable.
-- `org_id` (String) Default organization ID used by resources that don't set org_id explicitly. Defaults to the PANGOLIN_ORG_ID environment variable.
+- `org_id` (String) Organization ID. Currently informational only: it is not used as a fallback by any resource or data source, and every resource that operates within an organization requires its own org_id attribute.

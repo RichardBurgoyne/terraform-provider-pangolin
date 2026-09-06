@@ -3,12 +3,12 @@
 page_title: "pangolin_target Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages a backend target on a Pangolin resource. Health checks are not yet supported by this provider.
+  Manages a backend target on a Pangolin resource. Health checks are not yet supported by this provider. Import using the format <resource_id>:<target_id>, e.g. terraform import pangolin_target.example 5:9.
 ---
 
 # pangolin_target (Resource)
 
-Manages a backend target on a Pangolin resource. Health checks are not yet supported by this provider.
+Manages a backend target on a Pangolin resource. Health checks are not yet supported by this provider. Import using the format `<resource_id>:<target_id>`, e.g. `terraform import pangolin_target.example 5:9`.
 
 ## Example Usage
 

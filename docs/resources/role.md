@@ -3,12 +3,12 @@
 page_title: "pangolin_role Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Note: org_id must already be set in config before terraform import, since there is no way to derive the organization from a role ID alone.
+  Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Import using the format <org_id>:<role_id>, e.g. terraform import pangolin_role.example acme:5.
 ---
 
 # pangolin_role (Resource)
 
-Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Note: org_id must already be set in config before terraform import, since there is no way to derive the organization from a role ID alone.
+Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Import using the format `<org_id>:<role_id>`, e.g. `terraform import pangolin_role.example acme:5`.
 
 ## Example Usage
 

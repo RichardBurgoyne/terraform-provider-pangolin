@@ -3,12 +3,12 @@
 page_title: "pangolin_api_key Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages an organization-scoped Pangolin API key. The secret key value is only ever available at creation time.
+  Manages an organization-scoped Pangolin API key. The secret key value is only ever available at creation time. Import using the format <org_id>:<api_key_id>, e.g. terraform import pangolin_api_key.example acme:k1 (the secret key value cannot be recovered by import).
 ---
 
 # pangolin_api_key (Resource)
 
-Manages an organization-scoped Pangolin API key. The secret key value is only ever available at creation time.
+Manages an organization-scoped Pangolin API key. The secret key value is only ever available at creation time. Import using the format `<org_id>:<api_key_id>`, e.g. `terraform import pangolin_api_key.example acme:k1` (the secret key value cannot be recovered by import).
 
 ## Example Usage
 

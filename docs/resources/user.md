@@ -3,12 +3,12 @@
 page_title: "pangolin_user Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing.
+  Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing. Import using the format <org_id>:<user_id>, e.g. terraform import pangolin_user.example acme:u1.
 ---
 
 # pangolin_user (Resource)
 
-Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing.
+Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing. Import using the format `<org_id>:<user_id>`, e.g. `terraform import pangolin_user.example acme:u1`.
 
 ## Example Usage
 
