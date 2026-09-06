@@ -19,6 +19,16 @@ type domainDataSource struct {
 	client *client.Client
 }
 
+type domainDataSourceModel struct {
+	OrgID              types.String `tfsdk:"org_id"`
+	DomainID           types.String `tfsdk:"domain_id"`
+	Type               types.String `tfsdk:"type"`
+	BaseDomain         types.String `tfsdk:"base_domain"`
+	CertResolver       types.String `tfsdk:"cert_resolver"`
+	PreferWildcardCert types.Bool   `tfsdk:"prefer_wildcard_cert"`
+	Verified           types.Bool   `tfsdk:"verified"`
+}
+
 func (d *domainDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_domain"
 }
@@ -51,7 +61,7 @@ func (d *domainDataSource) Configure(ctx context.Context, req datasource.Configu
 }
 
 func (d *domainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var model domainResourceModel
+	var model domainDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return

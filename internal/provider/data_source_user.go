@@ -4,14 +4,19 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/RichardBurgoyne/terraform-provider-pangolin/internal/client"
 )
 
-var _ datasource.DataSource = &userDataSource{}
+var (
+	_ datasource.DataSource                     = &userDataSource{}
+	_ datasource.DataSourceWithConfigValidators = &userDataSource{}
+)
 
 func NewUserDataSource() datasource.DataSource { return &userDataSource{} }
 
@@ -37,6 +42,15 @@ func (d *userDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 			"user_id":  schema.StringAttribute{Optional: true, Computed: true},
 			"username": schema.StringAttribute{Optional: true, Computed: true},
 		},
+	}
+}
+
+func (d *userDataSource) ConfigValidators(ctx context.Context) []datasource.ConfigValidator {
+	return []datasource.ConfigValidator{
+		datasourcevalidator.ExactlyOneOf(
+			path.MatchRoot("user_id"),
+			path.MatchRoot("username"),
+		),
 	}
 }
 

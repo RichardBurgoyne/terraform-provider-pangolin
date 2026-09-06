@@ -4,14 +4,19 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/RichardBurgoyne/terraform-provider-pangolin/internal/client"
 )
 
-var _ datasource.DataSource = &roleDataSource{}
+var (
+	_ datasource.DataSource                     = &roleDataSource{}
+	_ datasource.DataSourceWithConfigValidators = &roleDataSource{}
+)
 
 func NewRoleDataSource() datasource.DataSource { return &roleDataSource{} }
 
@@ -37,6 +42,15 @@ func (d *roleDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 			"role_id": schema.Int64Attribute{Optional: true, Computed: true},
 			"name":    schema.StringAttribute{Optional: true, Computed: true},
 		},
+	}
+}
+
+func (d *roleDataSource) ConfigValidators(ctx context.Context) []datasource.ConfigValidator {
+	return []datasource.ConfigValidator{
+		datasourcevalidator.ExactlyOneOf(
+			path.MatchRoot("role_id"),
+			path.MatchRoot("name"),
+		),
 	}
 }
 

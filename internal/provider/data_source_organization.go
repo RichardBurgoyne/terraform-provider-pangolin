@@ -19,6 +19,13 @@ type organizationDataSource struct {
 	client *client.Client
 }
 
+type organizationDataSourceModel struct {
+	OrgID         types.String `tfsdk:"org_id"`
+	Name          types.String `tfsdk:"name"`
+	Subnet        types.String `tfsdk:"subnet"`
+	UtilitySubnet types.String `tfsdk:"utility_subnet"`
+}
+
 func (d *organizationDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_organization"
 }
@@ -48,7 +55,7 @@ func (d *organizationDataSource) Configure(ctx context.Context, req datasource.C
 }
 
 func (d *organizationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var model organizationResourceModel
+	var model organizationDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
