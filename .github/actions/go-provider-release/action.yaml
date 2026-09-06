@@ -1,0 +1,46 @@
+---
+name: Go Provider Release
+description: >-
+  Import a GPG signing key and run GoReleaser for a Go Terraform provider.
+  Reads .goreleaser.yml from the calling repo. Assumes the repo is already
+  checked out (with full history and tags, i.e. fetch-depth 0) by the
+  calling job.
+
+inputs:
+  working-directory:
+    description: Directory containing the Go module and .goreleaser.yml
+    required: false
+    default: '.'
+  gpg-private-key:
+    description: Armored GPG private key used to sign release checksums
+    required: true
+  gpg-passphrase:
+    description: Passphrase for the GPG private key
+    required: true
+  github-token:
+    description: Token GoReleaser uses to publish the GitHub Release
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go 🐹
+      uses: actions/setup-go@v7
+      with:
+        go-version-file: ${{ inputs.working-directory }}/go.mod
+
+    - name: Import GPG key 🔐
+      id: import-gpg
+      uses: crazy-max/ghaction-import-gpg@v7
+      with:
+        gpg_private_key: ${{ inputs.gpg-private-key }}
+        passphrase: ${{ inputs.gpg-passphrase }}
+
+    - name: Release 🚀
+      uses: goreleaser/goreleaser-action@v7
+      with:
+        workdir: ${{ inputs.working-directory }}
+        args: release --clean
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GPG_FINGERPRINT: ${{ steps.import-gpg.outputs.fingerprint }}

@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
 
       - name: Release 🚀
-        uses: RichardBurgoyne/reusable-workflows/.github/actions/go-provider-release@v1.2
+        uses: ./.github/actions/go-provider-release
         with:
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}

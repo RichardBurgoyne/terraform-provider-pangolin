@@ -1,0 +1,70 @@
+---
+name: Go Provider Test
+description: >-
+  Format check, vet, lint, test, build, and docs-drift check for a Go
+  Terraform provider. Assumes the repo is already checked out by the
+  calling job.
+
+inputs:
+  working-directory:
+    description: Directory containing the Go module
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go 🐹
+      uses: actions/setup-go@v7
+      with:
+        go-version-file: ${{ inputs.working-directory }}/go.mod
+
+    - name: Format check 🎨
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        unformatted="$(gofmt -l .)"
+        if [ -n "$unformatted" ]; then
+          echo "❌ The following files are not gofmt-formatted:"
+          echo "$unformatted"
+          exit 1
+        fi
+
+    - name: Vet 🔎
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: go vet ./...
+
+    - name: Install golangci-lint 🧹
+      uses: golangci/golangci-lint-action@v9
+      with:
+        working-directory: ${{ inputs.working-directory }}
+        version: latest
+
+    - name: Test 🧪
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: go test -race -cover ./...
+
+    - name: Build 🏗️
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: go build ./...
+
+    - name: Install tfplugindocs 📖
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        go install \
+          github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+
+    - name: Docs drift check 📚
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        tfplugindocs generate
+        if [ -n "$(git status --porcelain docs/)" ]; then
+          echo "❌ Generated docs are out of date, run tfplugindocs generate"
+          git status --porcelain docs/
+          exit 1
+        fi

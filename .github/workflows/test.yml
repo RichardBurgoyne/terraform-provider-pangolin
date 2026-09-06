@@ -16,4 +16,4 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Test 🧪
-        uses: RichardBurgoyne/reusable-workflows/.github/actions/go-provider-test@v1.2
+        uses: ./.github/actions/go-provider-test
