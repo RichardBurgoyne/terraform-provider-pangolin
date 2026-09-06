@@ -102,6 +102,7 @@ func (p *pangolinProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewDomainResource,
 		NewSiteResource,
 		NewPangolinResourceResource,
+		NewTargetResource,
 	}
 }
 
