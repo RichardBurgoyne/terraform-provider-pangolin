@@ -105,6 +105,7 @@ func (p *pangolinProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewTargetResource,
 		NewRoleResource,
 		NewUserResource,
+		NewAPIKeyResource,
 	}
 }
 
