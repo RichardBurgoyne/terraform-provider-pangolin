@@ -99,11 +99,13 @@ func (p *pangolinProvider) Configure(ctx context.Context, req provider.Configure
 func (p *pangolinProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewOrganizationResource,
+		NewDomainResource,
 	}
 }
 
 func (p *pangolinProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewOrganizationDataSource,
+		NewDomainDataSource,
 	}
 }
