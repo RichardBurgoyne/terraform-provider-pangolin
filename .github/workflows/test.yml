@@ -1,0 +1,19 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛒
+        uses: actions/checkout@v5
+
+      - name: Test 🧪
+        uses: RichardBurgoyne/reusable-workflows/.github/actions/go-provider-test@v1.2
