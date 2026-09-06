@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -50,9 +52,9 @@ func (r *userResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"username":  schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Username, lowercased server-side."},
 			"email":     schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Email address."},
 			"name":      schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Display name."},
-			"idp_id":    schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{}, Description: "Numeric ID of the OIDC identity provider this user authenticates through."},
+			"idp_id":    schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Numeric ID of the OIDC identity provider this user authenticates through."},
 			"role_ids":  schema.ListAttribute{Required: true, ElementType: types.Int64Type, Description: "Role IDs to grant. Can only grow after creation (see resource description)."},
-			"auto_provisioned": schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether this user was auto-provisioned."},
+			"auto_provisioned": schema.BoolAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}, Description: "Whether this user was auto-provisioned."},
 		},
 	}
 }
@@ -143,14 +145,8 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	if !plan.AutoProvisioned.IsUnknown() {
-		v := plan.AutoProvisioned.ValueBool()
-		if err := r.client.UpdateOrgUser(ctx, state.OrgID.ValueString(), state.UserID.ValueString(), client.UpdateOrgUserRequest{AutoProvisioned: &v}); err != nil {
-			resp.Diagnostics.AddError("Error updating user", err.Error())
-			return
-		}
-	}
-
+	// Validate role changes BEFORE any mutations. If a removal is needed,
+	// return error immediately without calling any API methods.
 	var planRoleIDs, stateRoleIDs []int64
 	resp.Diagnostics.Append(plan.RoleIDs.ElementsAs(ctx, &planRoleIDs, false)...)
 	resp.Diagnostics.Append(state.RoleIDs.ElementsAs(ctx, &stateRoleIDs, false)...)
@@ -165,12 +161,6 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	planned := make(map[int64]bool, len(planRoleIDs))
 	for _, id := range planRoleIDs {
 		planned[id] = true
-		if !existing[id] {
-			if err := r.client.AddUserRole(ctx, id, state.UserID.ValueString()); err != nil {
-				resp.Diagnostics.AddError("Error adding role to user", err.Error())
-				return
-			}
-		}
 	}
 	for _, id := range stateRoleIDs {
 		if !planned[id] {
@@ -182,8 +172,28 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 	}
 
+	// Role validation passed, now perform mutations.
+	if !plan.AutoProvisioned.IsUnknown() {
+		v := plan.AutoProvisioned.ValueBool()
+		if err := r.client.UpdateOrgUser(ctx, state.OrgID.ValueString(), state.UserID.ValueString(), client.UpdateOrgUserRequest{AutoProvisioned: &v}); err != nil {
+			resp.Diagnostics.AddError("Error updating user", err.Error())
+			return
+		}
+	}
+
+	for _, id := range planRoleIDs {
+		if !existing[id] {
+			if err := r.client.AddUserRole(ctx, id, state.UserID.ValueString()); err != nil {
+				resp.Diagnostics.AddError("Error adding role to user", err.Error())
+				return
+			}
+		}
+	}
+
 	plan.UserID = state.UserID
-	plan.AutoProvisioned = types.BoolValue(plan.AutoProvisioned.ValueBool())
+	if plan.AutoProvisioned.IsUnknown() {
+		plan.AutoProvisioned = state.AutoProvisioned
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
