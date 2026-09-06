@@ -18,7 +18,7 @@
 - All Pangolin API field names, HTTP verbs, and paths below were read directly from `github.com/fosrl/pangolin` source (`server/routers/*` and `server/routers/external.ts`, the route-mounting file that is the single source of truth for verb+path). Where a detail could not be confirmed from source, the task says so explicitly and gives a fallback.
 - Every API response is wrapped in an envelope: `{"data": ..., "success": bool, "error": bool, "message": string, "status": int}`. `internal/client`'s `do` helper unwraps this once; individual client methods work with plain Go structs, not the envelope.
 - License is MPL-2.0. Module path is `github.com/RichardBurgoyne/terraform-provider-pangolin`.
-- Provider's `endpoint` attribute is the full API base URL the caller's Pangolin instance uses (including any version prefix like `/v1` if their instance has one) — the client appends resource paths directly to it and does not hardcode a version prefix itself, since the exact self-hosted base path was not confirmed from source.
+- Provider's `endpoint` attribute is the full API base URL the caller's Pangolin instance uses (including any version prefix like `/v1` if their instance has one) - the client appends resource paths directly to it and does not hardcode a version prefix itself, since the exact self-hosted base path was not confirmed from source.
 - v1 scope is deliberately narrower than Pangolin's full API on a few resources where the real schema (read from source) turned out to be more complex than the original design spec assumed. Each such narrowing is called out in that resource's task with the specific fields deferred to v1.x.
 
 ---
@@ -205,7 +205,7 @@ git commit -m "feat: add go-provider-release composite action"
 Run: `cd /home/kiwi/claude/reusable-workflows && git tag v1 -f && git push origin main --tags -f`
 Expected: both new actions available at `RichardBurgoyne/reusable-workflows/.github/actions/{go-provider-test,go-provider-release}@v1`
 
-Note: `terraform-prepare` already uses `v1.1`, not a moving `v1` tag on this repo (its caller pins `@v1.1` exactly). Check whether `v1` already exists as a tag on this repo before force-moving it — if it does and is used by other callers, cut a new tag (e.g. `v1.2`) instead of moving `v1`, and update this task's "Produces" reference accordingly before Task 6/7 use it.
+Note: `terraform-prepare` already uses `v1.1`, not a moving `v1` tag on this repo (its caller pins `@v1.1` exactly). Check whether `v1` already exists as a tag on this repo before force-moving it - if it does and is used by other callers, cut a new tag (e.g. `v1.2`) instead of moving `v1`, and update this task's "Produces" reference accordingly before Task 6/7 use it.
 
 ---
 
@@ -216,7 +216,7 @@ Note: `terraform-prepare` already uses `v1.1`, not a moving `v1` tag on this rep
 **Files:**
 - Create: `go.mod`
 - Create: `main.go`
-- Create: `internal/provider/provider.go` (empty-shell provider, no attributes yet — Task 5 fills in the schema)
+- Create: `internal/provider/provider.go` (empty-shell provider, no attributes yet - Task 5 fills in the schema)
 - Create: `internal/provider/provider_test.go`
 - Create: `GNUmakefile`
 - Create: `LICENSE`
@@ -277,7 +277,7 @@ func (p *pangolinProvider) DataSources(ctx context.Context) []func() datasource.
 }
 ```
 
-Note: `Schema` and `Configure` are added in Task 5 once `internal/client` exists (Task 4). Go will not compile a `provider.Provider` implementation missing those methods, so this file is intentionally incomplete until Task 5 — do not attempt `go build` until Task 5's Step 4 passes.
+Note: `Schema` and `Configure` are added in Task 5 once `internal/client` exists (Task 4). Go will not compile a `provider.Provider` implementation missing those methods, so this file is intentionally incomplete until Task 5 - do not attempt `go build` until Task 5's Step 4 passes.
 
 - [ ] **Step 4: Write main.go**
 
@@ -384,7 +384,7 @@ func TestNew(t *testing.T) {
 - [ ] **Step 7: Verify it builds and the placeholder test passes**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go build ./... && go test ./...`
-Expected: build succeeds (once Task 5 adds `Schema`/`Configure` — if running this step before Task 5, expect a compile error naming the missing methods; that is correct and expected at this point, do not "fix" it here). If you are doing Task 3 and Task 5 back to back in one sitting, it is fine to defer this verification step to the end of Task 5's Step 4 instead.
+Expected: build succeeds (once Task 5 adds `Schema`/`Configure` - if running this step before Task 5, expect a compile error naming the missing methods; that is correct and expected at this point, do not "fix" it here). If you are doing Task 3 and Task 5 back to back in one sitting, it is fine to defer this verification step to the end of Task 5's Step 4 instead.
 
 - [ ] **Step 8: Commit**
 
@@ -480,7 +480,7 @@ func TestDo_ReturnsAPIErrorOnFailure(t *testing.T) {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run TestDo -v`
-Expected: FAIL — `client.New` undefined (package doesn't exist yet)
+Expected: FAIL - `client.New` undefined (package doesn't exist yet)
 
 - [ ] **Step 3: Write the implementation**
 
@@ -649,7 +649,7 @@ func TestSchema_HasRequiredAttributes(t *testing.T) {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/provider/... -run TestSchema -v`
-Expected: FAIL — `p.Schema` undefined, or compile error (pangolinProvider doesn't implement `provider.Provider` yet because `Schema`/`Configure` are missing)
+Expected: FAIL - `p.Schema` undefined, or compile error (pangolinProvider doesn't implement `provider.Provider` yet because `Schema`/`Configure` are missing)
 
 - [ ] **Step 3: Write the implementation**
 
@@ -796,7 +796,7 @@ git commit -m "feat: add provider configuration schema and client wiring"
 - Create: `.github/workflows/test.yml`
 
 **Interfaces:**
-- Consumes: `RichardBurgoyne/reusable-workflows/.github/actions/go-provider-test@v1` (or whatever tag Task 2 Step 4 actually produced, e.g. `v1.2` — use that exact tag here)
+- Consumes: `RichardBurgoyne/reusable-workflows/.github/actions/go-provider-test@v1` (or whatever tag Task 2 Step 4 actually produced, e.g. `v1.2` - use that exact tag here)
 
 - [ ] **Step 1: Write the workflow**
 
@@ -1001,9 +1001,9 @@ Note: `goreleaser check` (validates `.goreleaser.yml` syntax against the real sc
 
 ## Task 8: `pangolin_organization` resource and data source
 
-Confirmed from `server/routers/external.ts`: `PUT /org` (create), `GET /org/:orgId` (read, response wrapped as `{"org": {...}}` — the only endpoint in this plan with that extra wrapping layer), `POST /org/:orgId` (update), `DELETE /org/:orgId` (delete). Create/read fields confirmed from `server/routers/org/createOrg.ts` and `getOrg.ts`: `orgId`, `name`, `subnet`, `utilitySubnet`.
+Confirmed from `server/routers/external.ts`: `PUT /org` (create), `GET /org/:orgId` (read, response wrapped as `{"org": {...}}` - the only endpoint in this plan with that extra wrapping layer), `POST /org/:orgId` (update), `DELETE /org/:orgId` (delete). Create/read fields confirmed from `server/routers/org/createOrg.ts` and `getOrg.ts`: `orgId`, `name`, `subnet`, `utilitySubnet`.
 
-v1 scope: `updateOrg.ts` was not read from source, so no update semantics are assumed here — all four attributes are `RequiresReplace`. Changing any of them destroys and recreates the organization rather than guessing at an unconfirmed update body.
+v1 scope: `updateOrg.ts` was not read from source, so no update semantics are assumed here - all four attributes are `RequiresReplace`. Changing any of them destroys and recreates the organization rather than guessing at an unconfirmed update body.
 
 **Files:**
 - Create: `internal/client/organization.go`
@@ -1105,7 +1105,7 @@ func TestDeleteOrganization(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run TestCreateOrganization -v`
-Expected: FAIL — undefined `CreateOrganizationRequest`/`CreateOrganization`
+Expected: FAIL - undefined `CreateOrganizationRequest`/`CreateOrganization`
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -1505,7 +1505,7 @@ git commit -m "feat: add pangolin_organization resource and data source"
 
 Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/domain` (create), `GET /org/:orgId/domain/:domainId` (read), `POST /org/:orgId/domain/:domainId` (update), `DELETE /org/:orgId/domain/:domainId` (delete). Create body confirmed from `createOrgDomain.ts`: `type` (`ns`|`cname`|`wildcard`), `baseDomain`, `certResolver` (optional), `preferWildcardCert` (optional). Update body confirmed from `updateDomain.ts`: `certResolver`, `preferWildcardCert` only. Read fields confirmed from `listDomains.ts`'s projection (the same table `getDomain.ts` selects from, so this is the safe common subset): `domainId`, `baseDomain`, `verified`, `type`, `configManaged`, `certResolver`, `preferWildcardCert`.
 
-This follows the same pattern as Task 8 (client file with Create/Get/Update/Delete, resource file, data source file, tests, examples, provider registration) — apply that same structure here.
+This follows the same pattern as Task 8 (client file with Create/Get/Update/Delete, resource file, data source file, tests, examples, provider registration) - apply that same structure here.
 
 **Files:**
 - Create: `internal/client/domain.go` + `internal/client/domain_test.go`
@@ -1595,7 +1595,7 @@ func TestDeleteDomain(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run TestCreateDomain -v`
-Expected: FAIL — undefined symbols
+Expected: FAIL - undefined symbols
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -2048,7 +2048,7 @@ git commit -m "feat: add pangolin_domain resource and data source"
 
 ## Task 10: `pangolin_site` resource and data source
 
-Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/site` (create), `GET /site/:siteId` (read), `POST /site/:siteId` (update), `DELETE /site/:siteId` (delete). Create body confirmed from `createSite.ts`: `name`, `exitNodeId` (optional int), `niceId` (optional, server-generates if absent), `pubKey` (optional), `subnet` (optional), `newtId`/`secret` (optional, server-generates if absent — only meaningful for `type = "newt"`), `address` (optional), `type` (required enum `newt`|`wireguard`|`local`). Update body confirmed from `updateSite.ts`: `name`, `niceId`, `dockerSocketEnabled`, `autoUpdateEnabled`, `autoUpdateOverrideOrg`, all optional — these are the only three fields updatable after creation; everything else is `RequiresReplace`. `newtId`/`secret` are write-once credentials (only returned in the create response, per `CreateSiteResponse`), so they are `Computed` + `Sensitive` and never re-derived on `Read`.
+Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/site` (create), `GET /site/:siteId` (read), `POST /site/:siteId` (update), `DELETE /site/:siteId` (delete). Create body confirmed from `createSite.ts`: `name`, `exitNodeId` (optional int), `niceId` (optional, server-generates if absent), `pubKey` (optional), `subnet` (optional), `newtId`/`secret` (optional, server-generates if absent - only meaningful for `type = "newt"`), `address` (optional), `type` (required enum `newt`|`wireguard`|`local`). Update body confirmed from `updateSite.ts`: `name`, `niceId`, `dockerSocketEnabled`, `autoUpdateEnabled`, `autoUpdateOverrideOrg`, all optional - these are the only three fields updatable after creation; everything else is `RequiresReplace`. `newtId`/`secret` are write-once credentials (only returned in the create response, per `CreateSiteResponse`), so they are `Computed` + `Sensitive` and never re-derived on `Read`.
 
 Same file/task structure as Tasks 8-9.
 
@@ -2144,7 +2144,7 @@ func TestDeleteSite(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run TestCreateSite -v`
-Expected: FAIL — undefined symbols
+Expected: FAIL - undefined symbols
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -2458,7 +2458,7 @@ func setSiteModelFromAPI(model *siteResourceModel, site *client.Site) {
 }
 ```
 
-Note: `exit_node_id` intentionally has no `RequiresReplace` plan modifier even though it behaves like an immutable field in practice — `createSite.ts` only persists `exitNodeId` for `type = "wireguard"` (it's explicitly not passed through for `type = "newt"`, chosen later when the Newt agent connects). Since it's conditionally meaningful, forcing replacement on any change is the wrong default for `type = "newt"` sites where the API doesn't even accept it. Document this nuance in the attribute description rather than encoding it in a plan modifier.
+Note: `exit_node_id` intentionally has no `RequiresReplace` plan modifier even though it behaves like an immutable field in practice - `createSite.ts` only persists `exitNodeId` for `type = "wireguard"` (it's explicitly not passed through for `type = "newt"`, chosen later when the Newt agent connects). Since it's conditionally meaningful, forcing replacement on any change is the wrong default for `type = "newt"` sites where the API doesn't even accept it. Document this nuance in the attribute description rather than encoding it in a plan modifier.
 
 - [ ] **Step 6: Write the resource schema test**
 
@@ -2642,7 +2642,7 @@ git commit -m "feat: add pangolin_site resource and data source"
 
 Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/resource` (create), `GET /resource/:resourceId` (read, flat object, confirmed from `getResource.ts`), `POST /resource/:resourceId` (update), `DELETE /resource/:resourceId` (delete).
 
-**v1 scope narrowing** (this is the resource where the real schema, read from `createResource.ts`/`updateResource.ts`, was substantially larger than the design spec anticipated): only `mode` values `http`, `ssh`, `rdp`, `vnc` are supported. `inference` mode (requires `aiProviders` attachments) and raw `tcp`/`udp` resources (the `proxyPort`-based `createRawResourceSchema` path, gated behind the `allow_raw_resources` config flag) are deferred to v1.x. Within HTTP-mode fields, `sso`, `blockAccess`, `emailWhitelistEnabled`, `applyRules`, `skipToIdpId` (inline-policy/access-control fields), `headers`, the four `maintenance*` fields, `tlsServerName`, `setHostHeader`, and `resourcePolicyId` are all deferred to v1.x as a follow-up "resource access policy" feature — they all interact with the inline-vs-shared-policy semantics in `updateResource.ts` that add significant complexity beyond a first pass.
+**v1 scope narrowing** (this is the resource where the real schema, read from `createResource.ts`/`updateResource.ts`, was substantially larger than the design spec anticipated): only `mode` values `http`, `ssh`, `rdp`, `vnc` are supported. `inference` mode (requires `aiProviders` attachments) and raw `tcp`/`udp` resources (the `proxyPort`-based `createRawResourceSchema` path, gated behind the `allow_raw_resources` config flag) are deferred to v1.x. Within HTTP-mode fields, `sso`, `blockAccess`, `emailWhitelistEnabled`, `applyRules`, `skipToIdpId` (inline-policy/access-control fields), `headers`, the four `maintenance*` fields, `tlsServerName`, `setHostHeader`, and `resourcePolicyId` are all deferred to v1.x as a follow-up "resource access policy" feature - they all interact with the inline-vs-shared-policy semantics in `updateResource.ts` that add significant complexity beyond a first pass.
 
 v1 create fields (confirmed from `createResource.ts`'s `createHttpResourceSchema`): `name`, `mode`, `domainId`, `subdomain` (optional), `stickySession` (optional), `postAuthPath` (optional), `pamMode` (optional, ssh only), `authDaemonPort`/`authDaemonMode` (optional, ssh only). v1 update fields (confirmed from `updateResource.ts`'s `updateHttpResourceBodySchema`, restricted to the v1 subset above): `name`, `niceId`, `subdomain`, `ssl`, `domainId`, `enabled`, `stickySession`, `postAuthPath`, `pamMode`, `authDaemonMode`, `authDaemonPort`.
 
@@ -2717,7 +2717,7 @@ func TestDeleteResource(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run TestCreateResource -v`
-Expected: FAIL — undefined symbols
+Expected: FAIL - undefined symbols
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -3227,7 +3227,7 @@ git commit -m "feat: add pangolin_resource resource and data source"
 
 ## Task 12: `pangolin_target` resource
 
-Confirmed from `server/routers/external.ts`: `PUT /resource/:resourceId/target` (create), `GET /target/:targetId` (read), `POST /target/:targetId` (update), `DELETE /target/:targetId` (delete). No data source for targets (not in the approved v1 list — targets are almost always managed alongside the resource they belong to, not looked up independently).
+Confirmed from `server/routers/external.ts`: `PUT /resource/:resourceId/target` (create), `GET /target/:targetId` (read), `POST /target/:targetId` (update), `DELETE /target/:targetId` (delete). No data source for targets (not in the approved v1 list - targets are almost always managed alongside the resource they belong to, not looked up independently).
 
 **v1 scope narrowing:** all 14 health-check fields (`hcEnabled`, `hcPath`, `hcScheme`, `hcMode`, `hcHostname`, `hcPort`, `hcInterval`, `hcUnhealthyInterval`, `hcTimeout`, `hcHeaders`, `hcFollowRedirects`, `hcMethod`, `hcStatus`, `hcTlsServerName`, `hcHealthyThreshold`, `hcUnhealthyThreshold`) are deferred to v1.x as a "target health checks" follow-up. Confirmed from `createTarget.ts`/`updateTarget.ts`: `updateTargetBodySchema` requires `siteId` and `ip` on every update call (they are not optional there, unlike every other field), so `Update` always sends both.
 
@@ -3296,7 +3296,7 @@ func TestDeleteTarget(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run TestCreateTarget -v`
-Expected: FAIL — undefined symbols
+Expected: FAIL - undefined symbols
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -3648,7 +3648,7 @@ func setTargetModelFromAPI(model *targetResourceModel, target *client.Target) {
 }
 ```
 
-Note: `Read`/`Update` restore `ResourceID` from state/plan after calling `setTargetModelFromAPI` because `client.Target`'s `ResourceID` field comes back as `0` for AI-provider-owned targets (`providerId` set instead) — a case this provider's `pangolin_target` doesn't create, but being defensive here means a `0` from the API can never accidentally clobber a real resource_id already known from configuration.
+Note: `Read`/`Update` restore `ResourceID` from state/plan after calling `setTargetModelFromAPI` because `client.Target`'s `ResourceID` field comes back as `0` for AI-provider-owned targets (`providerId` set instead) - a case this provider's `pangolin_target` doesn't create, but being defensive here means a `0` from the API can never accidentally clobber a real resource_id already known from configuration.
 
 - [ ] **Step 6: Write the resource schema test**
 
@@ -3716,7 +3716,7 @@ git commit -m "feat: add pangolin_target resource"
 
 ## Task 13: `pangolin_role` resource and data source
 
-Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/role` (create), `GET /org/:orgId/roles` (list, paginated), `POST /role/:roleId` (update), `DELETE /role/:roleId` (delete). **Important:** a direct `GET /role/:roleId` route exists in `role/getRole.ts` but is commented out in `external.ts` (disabled) — there is no single-role read endpoint on the live integration API. `Read` therefore calls `ListRoles` and filters by `roleId` client-side, exactly the same way `getRoleByID` below is implemented.
+Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/role` (create), `GET /org/:orgId/roles` (list, paginated), `POST /role/:roleId` (update), `DELETE /role/:roleId` (delete). **Important:** a direct `GET /role/:roleId` route exists in `role/getRole.ts` but is commented out in `external.ts` (disabled) - there is no single-role read endpoint on the live integration API. `Read` therefore calls `ListRoles` and filters by `roleId` client-side, exactly the same way `getRoleByID` below is implemented.
 
 **v1 scope narrowing:** `sshSudoCommands` and `sshUnixGroups` are stored server-side as JSON-stringified arrays (`JSON.stringify(...)` in `createRole.ts`), and whether `GET`/list returns them as a parsed array or a raw JSON string was not confirmed from source (no dedicated read-side parsing was found for these two fields, unlike e.g. `hcHeaders` elsewhere which explicitly gets `JSON.parse`d back). Rather than guess the wire shape, these two fields plus `sshCreateHomeDir` are deferred to v1.x. v1 fields (confirmed from `createRole.ts`/`updateRole.ts`): `name`, `description`, `requireDeviceApproval`, `allowSsh`, `sshSudoMode`.
 
@@ -3817,7 +3817,7 @@ func TestDeleteRole(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run 'TestCreateRole|TestGetRoleByID|TestDeleteRole' -v`
-Expected: FAIL — undefined symbols
+Expected: FAIL - undefined symbols
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -4295,9 +4295,9 @@ git commit -m "feat: add pangolin_role resource and data source"
 
 ## Task 14: `pangolin_user` resource and data source
 
-Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/user` (create), `GET /org/:orgId/user/:userId` (read), `GET /org/:orgId/users` (list), `POST /org/:orgId/user/:userId` (update), `DELETE /org/:orgId/user/:userId` (delete). Confirmed from `createOrgUser.ts`: **the create response body is `{}` — it returns no user data at all**, not even the generated `userId`. `Create` must follow up with `ListUsers` filtered by `username` to discover the ID Terraform needs to track. Confirmed from `createOrgUser.ts`: `type: "internal"` is explicitly rejected server-side ("Internal users are not supported yet"), so this resource only supports `type = "oidc"`, requiring a plain numeric `idp_id` the caller already knows (there is no `pangolin_idp` resource/data source in this plan — IdP configuration is v1.x). Confirmed from `updateOrgUser.ts`: the only field the update endpoint accepts is `autoProvisioned` — nothing else about an org-user membership can be changed via that route. Confirmed from `external.ts`: the only role-membership mutation route reachable after creation is `POST /role/:roleId/add/:userId` (adds one role, no corresponding removal route exists in the integration API), so `role_ids` can only grow, never shrink, without destroying and recreating the resource.
+Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/user` (create), `GET /org/:orgId/user/:userId` (read), `GET /org/:orgId/users` (list), `POST /org/:orgId/user/:userId` (update), `DELETE /org/:orgId/user/:userId` (delete). Confirmed from `createOrgUser.ts`: **the create response body is `{}` - it returns no user data at all**, not even the generated `userId`. `Create` must follow up with `ListUsers` filtered by `username` to discover the ID Terraform needs to track. Confirmed from `createOrgUser.ts`: `type: "internal"` is explicitly rejected server-side ("Internal users are not supported yet"), so this resource only supports `type = "oidc"`, requiring a plain numeric `idp_id` the caller already knows (there is no `pangolin_idp` resource/data source in this plan - IdP configuration is v1.x). Confirmed from `updateOrgUser.ts`: the only field the update endpoint accepts is `autoProvisioned` - nothing else about an org-user membership can be changed via that route. Confirmed from `external.ts`: the only role-membership mutation route reachable after creation is `POST /role/:roleId/add/:userId` (adds one role, no corresponding removal route exists in the integration API), so `role_ids` can only grow, never shrink, without destroying and recreating the resource.
 
-`GetOrgUser`'s exact response shape was not read from source (only its route mount was confirmed) — the fields modeled below (`userId`, `username`, `email`, `name`, `type`, `idpId`) are the columns `createOrgUser.ts` itself inserts into the `users` table, which is a reasonable floor, not a confirmed ceiling. If the live response nests fields differently, adjust `client.User`'s tags during implementation and note the correction in the commit.
+`GetOrgUser`'s exact response shape was not read from source (only its route mount was confirmed) - the fields modeled below (`userId`, `username`, `email`, `name`, `type`, `idpId`) are the columns `createOrgUser.ts` itself inserts into the `users` table, which is a reasonable floor, not a confirmed ceiling. If the live response nests fields differently, adjust `client.User`'s tags during implementation and note the correction in the commit.
 
 **Files:**
 - Create: `internal/client/user.go` + `internal/client/user_test.go`
@@ -4388,7 +4388,7 @@ func TestDeleteOrgUser(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run 'TestCreateOrgUser|TestAddUserRole|TestDeleteOrgUser' -v`
-Expected: FAIL — undefined symbols
+Expected: FAIL - undefined symbols
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -4869,7 +4869,7 @@ git commit -m "feat: add pangolin_user resource and data source"
 
 ## Task 15: `pangolin_api_key` resource
 
-Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/api-key` (create), `GET /org/:orgId/api-key/:apiKeyId` (read), `DELETE /org/:orgId/api-key/:apiKeyId` (delete), `POST /org/:orgId/api-key/:apiKeyId/actions` (replace the full action list), `GET /org/:orgId/api-key/:apiKeyId/actions` (list current actions). No update route for `name` exists — it's `RequiresReplace`. Confirmed from `createOrgApiKey.ts`: the raw `apiKey` secret is only ever present in the create response (`CreateOrgApiKeyResponse`); it cannot be recovered later, so it's `Computed` + `Sensitive` and preserved across `Read` the same way `pangolin_site`'s `secret` is (Task 10). No data source (matches the approved v1 list — API keys are secrets, not something you look up and reference elsewhere).
+Confirmed from `server/routers/external.ts`: `PUT /org/:orgId/api-key` (create), `GET /org/:orgId/api-key/:apiKeyId` (read), `DELETE /org/:orgId/api-key/:apiKeyId` (delete), `POST /org/:orgId/api-key/:apiKeyId/actions` (replace the full action list), `GET /org/:orgId/api-key/:apiKeyId/actions` (list current actions). No update route for `name` exists - it's `RequiresReplace`. Confirmed from `createOrgApiKey.ts`: the raw `apiKey` secret is only ever present in the create response (`CreateOrgApiKeyResponse`); it cannot be recovered later, so it's `Computed` + `Sensitive` and preserved across `Read` the same way `pangolin_site`'s `secret` is (Task 10). No data source (matches the approved v1 list - API keys are secrets, not something you look up and reference elsewhere).
 
 **Files:**
 - Create: `internal/client/api_key.go` + `internal/client/api_key_test.go`
@@ -4951,7 +4951,7 @@ func TestDeleteAPIKey(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run 'TestCreateAPIKey|TestSetAPIKeyActions|TestDeleteAPIKey' -v`
-Expected: FAIL — undefined symbols
+Expected: FAIL - undefined symbols
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -5017,7 +5017,7 @@ func (c *Client) DeleteAPIKey(ctx context.Context, orgID, apiKeyID string) error
 }
 ```
 
-Note: `setApiKeyActions.ts`'s response data is `{}` and `listApiKeyActions.ts`'s exact field name was not read from source — `ActionIDs`/`"actionIds"` is inferred from the request body's own field name (`actionIds`) and the general envelope convention seen everywhere else; verify this against a real response during implementation and adjust the tag if the list endpoint nests it differently.
+Note: `setApiKeyActions.ts`'s response data is `{}` and `listApiKeyActions.ts`'s exact field name was not read from source - `ActionIDs`/`"actionIds"` is inferred from the request body's own field name (`actionIds`) and the general envelope convention seen everywhere else; verify this against a real response during implementation and adjust the tag if the list endpoint nests it differently.
 
 - [ ] **Step 4: Run to verify the client tests pass**
 
@@ -5277,7 +5277,7 @@ git commit -m "feat: add pangolin_api_key resource"
 
 ## Task 16: `pangolin_role_resource_grant` resource
 
-Confirmed from `addRoleToResource.ts`/`removeRoleFromResource.ts` and their mount points: `POST /resource/{resourceId}/roles/add` (body `{roleId}`) grants, `POST /resource/{resourceId}/roles/remove` (body `{roleId}`) revokes. Confirmed from `external.ts`: `GET /resource/:resourceId/roles` lists granted role IDs, used here for `Read` since there's no single-grant GET. No update semantics exist for a grant (it's binary: granted or not) — `Update` is unreachable because every attribute is `RequiresReplace`.
+Confirmed from `addRoleToResource.ts`/`removeRoleFromResource.ts` and their mount points: `POST /resource/{resourceId}/roles/add` (body `{roleId}`) grants, `POST /resource/{resourceId}/roles/remove` (body `{roleId}`) revokes. Confirmed from `external.ts`: `GET /resource/:resourceId/roles` lists granted role IDs, used here for `Read` since there's no single-grant GET. No update semantics exist for a grant (it's binary: granted or not) - `Update` is unreachable because every attribute is `RequiresReplace`.
 
 **Files:**
 - Create: `internal/client/role_resource_grant.go` + `internal/client/role_resource_grant_test.go`
@@ -5356,7 +5356,7 @@ func TestRemoveRoleFromResource(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run 'TestAddRoleToResource|TestListResourceRoles|TestRemoveRoleFromResource' -v`
-Expected: FAIL — undefined symbols
+Expected: FAIL - undefined symbols
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -5523,7 +5523,7 @@ func (r *roleResourceGrantResource) Delete(ctx context.Context, req resource.Del
 }
 ```
 
-No `ImportState`: both IDs are required attributes with no computed ID of their own, so `terraform import pangolin_role_resource_grant.example <resource_id>/<role_id>` isn't wired up in v1 — grants are cheap to recreate from configuration instead. (v1.x can add `ResourceWithImportState` parsing a composite ID if this turns out to matter in practice.)
+No `ImportState`: both IDs are required attributes with no computed ID of their own, so `terraform import pangolin_role_resource_grant.example <resource_id>/<role_id>` isn't wired up in v1 - grants are cheap to recreate from configuration instead. (v1.x can add `ResourceWithImportState` parsing a composite ID if this turns out to matter in practice.)
 
 - [ ] **Step 6: Write the resource schema test**
 
@@ -5664,7 +5664,7 @@ func TestRemoveUserFromResource(t *testing.T) {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `cd /home/kiwi/claude/terraform-provider-pangolin && go test ./internal/client/... -run 'TestAddUserToResource|TestListResourceUsers|TestRemoveUserFromResource' -v`
-Expected: FAIL — undefined symbols
+Expected: FAIL - undefined symbols
 
 - [ ] **Step 3: Implement the client methods**
 
@@ -5906,7 +5906,7 @@ Expected: `docs/index.md`, `docs/resources/*.md`, `docs/data-sources/*.md` creat
 
 - [ ] **Step 2: Review generated docs for accuracy**
 
-Read through `docs/index.md` and spot-check two or three resource docs against the actual schema in their `.go` files. Confirm the v1.x deferrals (raw resources, inference mode, health checks, SSH sudo lists, IdP-backed users beyond `idp_id`, role removal from users) are mentioned somewhere reachable from `docs/index.md` — either in the provider description or a short "Roadmap" section in `README.md`. Add one if it's missing.
+Read through `docs/index.md` and spot-check two or three resource docs against the actual schema in their `.go` files. Confirm the v1.x deferrals (raw resources, inference mode, health checks, SSH sudo lists, IdP-backed users beyond `idp_id`, role removal from users) are mentioned somewhere reachable from `docs/index.md` - either in the provider description or a short "Roadmap" section in `README.md`. Add one if it's missing.
 
 - [ ] **Step 3: Run the full local verification one more time**
 
@@ -5921,7 +5921,7 @@ git add docs/
 git commit -m "docs: generate provider documentation"
 ```
 
-- [ ] **Step 5: Create the GitHub repo (ask the user to confirm before this step — it's the first externally-visible action in this plan)**
+- [ ] **Step 5: Create the GitHub repo (ask the user to confirm before this step - it's the first externally-visible action in this plan)**
 
 Run: `gh repo create RichardBurgoyne/terraform-provider-pangolin --public --source=/home/kiwi/claude/terraform-provider-pangolin --remote=origin --description "Terraform provider for Pangolin"`
 Expected: repo created, `origin` remote added
@@ -5934,7 +5934,7 @@ Expected: push succeeds, `main` branch visible on GitHub
 - [ ] **Step 7: Verify the Test workflow runs and passes on GitHub**
 
 Run: `gh run list --repo RichardBurgoyne/terraform-provider-pangolin --limit 5` (after waiting for the push-triggered run to start)
-Expected: the "Test" workflow appears and eventually shows a green conclusion. If it fails on the `go-provider-test` composite action, the most likely cause is the reusable-workflows tag mismatch flagged in Task 2 Step 4 — confirm `.github/workflows/test.yml` references the tag that actually exists on `RichardBurgoyne/reusable-workflows`.
+Expected: the "Test" workflow appears and eventually shows a green conclusion. If it fails on the `go-provider-test` composite action, the most likely cause is the reusable-workflows tag mismatch flagged in Task 2 Step 4 - confirm `.github/workflows/test.yml` references the tag that actually exists on `RichardBurgoyne/reusable-workflows`.
 
 - [ ] **Step 8: Report remaining manual setup to the user**
 
@@ -5955,15 +5955,15 @@ Tell the user these four steps are ready whenever they want to do them, and that
 **Deviations from the original spec, and why:**
 - `pangolin_organization`: promoted resource, not just data source (confirmed `PUT /org`, `DELETE /org/:orgId` exist).
 - `pangolin_domain`: promoted resource, not just data source (confirmed `PUT /org/:orgId/domain` exists), update limited to `cert_resolver`/`prefer_wildcard_cert` only (confirmed from `updateDomain.ts`).
-- `pangolin_resource`: scoped to `http`/`ssh`/`rdp`/`vnc` modes only; raw `tcp`/`udp` and `inference` modes, plus most policy/access-control fields, deferred to v1.x. This is a real narrowing of scope discovered only once the actual Zod schemas were read — the design spec's field list for this resource was a guess; this plan's is verified.
+- `pangolin_resource`: scoped to `http`/`ssh`/`rdp`/`vnc` modes only; raw `tcp`/`udp` and `inference` modes, plus most policy/access-control fields, deferred to v1.x. This is a real narrowing of scope discovered only once the actual Zod schemas were read - the design spec's field list for this resource was a guess; this plan's is verified.
 - `pangolin_target`: all health-check fields deferred to v1.x.
 - `pangolin_role`: `sshSudoCommands`, `sshUnixGroups`, `sshCreateHomeDir` deferred to v1.x (unconfirmed wire format).
-- `pangolin_user`: locked to `type = "oidc"` (internal users rejected server-side today); `role_ids` can only grow after creation (no role-removal route exists in the integration API) — `Update` returns an explicit error rather than silently failing if the plan tries to shrink the list.
+- `pangolin_user`: locked to `type = "oidc"` (internal users rejected server-side today); `role_ids` can only grow after creation (no role-removal route exists in the integration API) - `Update` returns an explicit error rather than silently failing if the plan tries to shrink the list.
 
 **Ambiguity flagged for the executor to resolve during implementation, not guessed at in this plan:**
-- `DELETE`/`GET` verbs for a small number of routes were confirmed directly from `external.ts`, so there should be no remaining guesses on HTTP verb+path for any v1 endpoint — if `go test` against a real instance disagrees with any path in this plan, trust the real instance and fix the plan's assumption, don't paper over it.
+- `DELETE`/`GET` verbs for a small number of routes were confirmed directly from `external.ts`, so there should be no remaining guesses on HTTP verb+path for any v1 endpoint - if `go test` against a real instance disagrees with any path in this plan, trust the real instance and fix the plan's assumption, don't paper over it.
 - `listApiKeyActions`'s exact response field name (Task 15).
 - `sshSudoCommands`/`sshUnixGroups` wire format if they're ever promoted out of v1.x.
 - `GetOrgUser`'s exact response shape beyond the columns `createOrgUser.ts` itself writes (Task 14).
 
-**Type consistency:** `client.Client.do`'s signature (`ctx, method, path string, body, out any`) is used identically across every client file in Tasks 8-17. `client.IsNotFound(err)` and `client.APIError` (Task 4) are the only error-inspection primitives used throughout — no task invents a second error type. Every resource's `Configure` follows the exact same four-line type-assertion pattern established in Task 8, so a reviewer skimming Tasks 9-17 can confirm at a glance they match without re-reading Task 8's full listing each time.
+**Type consistency:** `client.Client.do`'s signature (`ctx, method, path string, body, out any`) is used identically across every client file in Tasks 8-17. `client.IsNotFound(err)` and `client.APIError` (Task 4) are the only error-inspection primitives used throughout - no task invents a second error type. Every resource's `Configure` follows the exact same four-line type-assertion pattern established in Task 8, so a reviewer skimming Tasks 9-17 can confirm at a glance they match without re-reading Task 8's full listing each time.

@@ -5,7 +5,7 @@
 A new, independently-written Terraform provider for [Pangolin](https://docs.pangolin.net)
 (reverse proxy / access control platform), published under `RichardBurgoyne`
 and to the public Terraform Registry. Built with `terraform-plugin-framework`.
-Reference material only — `stackopshq/terraform-provider-pangolin`,
+Reference material only - `stackopshq/terraform-provider-pangolin`,
 `Terraform-for-Proxmox/terraform-provider-proxmox`, and HashiCorp's own
 provider tutorials were consulted for architectural ideas; no code is shared
 or copied from any of them.
@@ -28,10 +28,10 @@ the existing `RichardBurgoyne/reusable-workflows` repo, alongside the current
 ## Non-goals (for v1)
 
 - Full coverage of every Pangolin API endpoint (clients, invitations, IdP
-  config, audit/analytics log data sources) — deferred to v1.x.
-- Acceptance tests against a live Pangolin instance — deferred; CI stays
+  config, audit/analytics log data sources) - deferred to v1.x.
+- Acceptance tests against a live Pangolin instance - deferred; CI stays
   unit-test-only with a mocked HTTP client.
-- Automated version bumping (e.g. release-please) — versions are tagged
+- Automated version bumping (e.g. release-please) - versions are tagged
   manually.
 
 ## Repositories touched
@@ -85,18 +85,18 @@ Go module `github.com/RichardBurgoyne/terraform-provider-pangolin`.
 
 Each `internal/provider/resource_*.go` and `data_source_*.go` is tested
 against `internal/client`'s interface using a fake transport
-(`httptest.Server` or an interface fake) — no live Pangolin instance in CI.
+(`httptest.Server` or an interface fake) - no live Pangolin instance in CI.
 
 ### `RichardBurgoyne/reusable-workflows` (existing, extended)
 
 Two new composite actions under `.github/actions/`, versioned the same way
 as `terraform-prepare` (tag `v1`, minor tags as needed):
 
-- **`go-provider-test`** — checkout, setup-go (`go-version-file: go.mod`),
+- **`go-provider-test`** - checkout, setup-go (`go-version-file: go.mod`),
   `gofmt` check, `go vet`, `golangci-lint run`, `go test -race -cover ./...`,
   `go build ./...`, `tfplugindocs generate --check` (fails if committed docs
   are stale relative to schema).
-- **`go-provider-release`** — checkout, setup-go, import GPG signing key
+- **`go-provider-release`** - checkout, setup-go, import GPG signing key
   from secrets, run `goreleaser release --clean`. Reads `.goreleaser.yml`
   from the calling repo (same division of responsibility as
   `terraform-prepare`: the action orchestrates, the repo supplies config).
@@ -130,7 +130,7 @@ Chosen as the IaC-shaped, CRUD-heavy subset of the API (per
 `pangolin_resource`, `pangolin_role`, `pangolin_user`, `pangolin_domain`.
 
 Domain creation isn't exposed by the documented common routes (domains
-appear org/base-provisioned, not per-resource) — `pangolin_domain` is
+appear org/base-provisioned, not per-resource) - `pangolin_domain` is
 data-source-only in v1 unless the full swagger spec (available at
 `https://api.pangolin.net/v1/docs` on a running instance) shows a create
 route once implementation starts, in which case it can be promoted to a
@@ -158,13 +158,13 @@ once the core is stable.
    - publishes a GitHub Release with binaries + checksums + signature,
    - generates release notes grouped by commit type (Features / Fixes /
      Chores / Docs) with **`test:` commits excluded entirely** from the
-     notes — not summarized, not listed under an "Other" section, just
+     notes - not summarized, not listed under an "Other" section, just
      dropped.
 4. GPG: a signing key dedicated to this provider is generated during
    implementation; the private key and passphrase are stored as repo
    secrets (`GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`). The public key must be
    uploaded to the Terraform Registry publisher settings once, manually,
-   by the account owner — this is an account-level action outside what
+   by the account owner - this is an account-level action outside what
    automation can do.
 5. Registry listing: after the first signed release exists, the repo is
    connected to `registry.terraform.io` under the `RichardBurgoyne`
@@ -172,7 +172,7 @@ once the core is stable.
 
 ## License
 
-MPL-2.0 — the de facto standard for Terraform provider repos, matching
+MPL-2.0 - the de facto standard for Terraform provider repos, matching
 HashiCorp's own providers.
 
 ## Testing strategy
@@ -180,13 +180,13 @@ HashiCorp's own providers.
 - Unit tests only, mocked HTTP client (`httptest.Server` or interface fake).
   No live Pangolin instance, no secrets, runs on every PR via `test.yml`.
 - Acceptance tests against a real self-hosted Pangolin instance are
-  explicitly deferred — can be added later as a separate, manually-triggered
+  explicitly deferred - can be added later as a separate, manually-triggered
   or scheduled workflow once the provider is stable.
 
 ## Open questions / risks
 
 - The exact full swagger surface (`https://api.pangolin.net/v1/docs`) hasn't
-  been read directly yet — v1 resource/field shapes will be finalized
+  been read directly yet - v1 resource/field shapes will be finalized
   against it during implementation, not against reverse-engineered docs
   pages. If a documented common route doesn't match the running swagger for
   a self-hosted instance, the swagger wins.
