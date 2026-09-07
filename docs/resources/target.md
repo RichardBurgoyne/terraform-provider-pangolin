@@ -3,12 +3,12 @@
 page_title: "pangolin_target Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages a backend target on a Pangolin resource. Health checks are not yet supported by this provider. Import using the format <resource_id>:<target_id>, e.g. terraform import pangolin_target.example 5:9.
+  Manages a backend target on a Pangolin resource, including its health check configuration. Import using the format <resource_id>:<target_id>, e.g. terraform import pangolin_target.example 5:9.
 ---
 
 # pangolin_target (Resource)
 
-Manages a backend target on a Pangolin resource. Health checks are not yet supported by this provider. Import using the format `<resource_id>:<target_id>`, e.g. `terraform import pangolin_target.example 5:9`.
+Manages a backend target on a Pangolin resource, including its health check configuration. Import using the format `<resource_id>:<target_id>`, e.g. `terraform import pangolin_target.example 5:9`.
 
 ## Example Usage
 
@@ -34,6 +34,22 @@ resource "pangolin_target" "example" {
 ### Optional
 
 - `enabled` (Boolean) Whether this target is enabled.
+- `hc_enabled` (Boolean) Whether health checks are enabled for this target. Requires hc_hostname to be set.
+- `hc_follow_redirects` (Boolean) Whether the HTTP health check follows redirects.
+- `hc_headers_json` (String) Extra headers sent with the health check request, as a JSON array of {name, value} objects, e.g. `[{"name":"X-Check","value":"1"}]`. Modeled as a JSON string rather than a nested list because the Pangolin API itself is inconsistent about this field's wire format across endpoints.
+- `hc_healthy_threshold` (Number) Consecutive successful checks required to mark the target healthy.
+- `hc_hostname` (String) Hostname or IP the health check connects to. Required when hc_enabled is true.
+- `hc_interval` (Number) Seconds between health checks while the target is healthy.
+- `hc_method` (String) HTTP method used for the health check request.
+- `hc_mode` (String) Health check protocol, e.g. http or tcp.
+- `hc_path` (String) HTTP path to request for the health check.
+- `hc_port` (Number) Port the health check connects to, if different from port.
+- `hc_scheme` (String) Scheme used for the health check request, e.g. http or https.
+- `hc_status` (Number) Expected HTTP status code for a healthy response.
+- `hc_timeout` (Number) Seconds to wait for a health check response before failing it.
+- `hc_tls_server_name` (String) TLS server name (SNI) to use for the health check request.
+- `hc_unhealthy_interval` (Number) Seconds between health checks while the target is unhealthy.
+- `hc_unhealthy_threshold` (Number) Consecutive failed checks required to mark the target unhealthy.
 - `method` (String) HTTP method restriction, if any.
 - `mode` (String) One of http, tcp, udp, ssh, rdp, vnc. Defaults to the resource's mode.
 - `path` (String) Path match for HTTP-mode routing.
@@ -44,4 +60,5 @@ resource "pangolin_target" "example" {
 
 ### Read-Only
 
+- `hc_health` (String) Server-computed health status: unknown, healthy, or unhealthy.
 - `target_id` (Number) Server-generated target ID.

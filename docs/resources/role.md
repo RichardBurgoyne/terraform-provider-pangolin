@@ -3,12 +3,12 @@
 page_title: "pangolin_role Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Import using the format <org_id>:<role_id>, e.g. terraform import pangolin_role.example acme:5.
+  Manages a Pangolin role. ssh_sudo_commands, ssh_create_home_dir, and ssh_unix_groups require a Pangolin subscription or license that includes role-based SSH controls; on an unlicensed org the server silently ignores them, which shows up as a persistent plan diff rather than an error. Import using the format <org_id>:<role_id>, e.g. terraform import pangolin_role.example acme:5.
 ---
 
 # pangolin_role (Resource)
 
-Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Import using the format `<org_id>:<role_id>`, e.g. `terraform import pangolin_role.example acme:5`.
+Manages a Pangolin role. ssh_sudo_commands, ssh_create_home_dir, and ssh_unix_groups require a Pangolin subscription or license that includes role-based SSH controls; on an unlicensed org the server silently ignores them, which shows up as a persistent plan diff rather than an error. Import using the format `<org_id>:<role_id>`, e.g. `terraform import pangolin_role.example acme:5`.
 
 ## Example Usage
 
@@ -33,7 +33,10 @@ resource "pangolin_role" "example" {
 - `allow_ssh` (Boolean) Whether members of this role can sign SSH keys.
 - `description` (String) Role description.
 - `require_device_approval` (Boolean) Whether devices used by members of this role require approval.
+- `ssh_create_home_dir` (Boolean) Whether a home directory is created for members of this role when they connect over SSH. Requires a license/subscription with role-based SSH controls.
+- `ssh_sudo_commands` (List of String) Sudo commands members of this role may run over SSH. Only meaningful when ssh_sudo_mode is commands. Requires a license/subscription with role-based SSH controls.
 - `ssh_sudo_mode` (String) One of none, full, commands.
+- `ssh_unix_groups` (List of String) Unix groups members of this role are added to over SSH. Requires a license/subscription with role-based SSH controls.
 
 ### Read-Only
 

@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -15,22 +16,57 @@ type Role struct {
 	RequireDeviceApproval bool   `json:"requireDeviceApproval"`
 	SSHSudoMode           string `json:"sshSudoMode"`
 	AllowSSH              bool   `json:"allowSsh"`
+
+	// SSHSudoCommands and SSHUnixGroups require a Pangolin subscription or
+	// license that includes role-based SSH controls; on an unlicensed org
+	// the server silently ignores these fields on create/update (they are
+	// not rejected, just dropped), so the value read back here may not
+	// match what was requested.
+	//
+	// The API is also inconsistent about their wire format: create/update/
+	// get/list requests accept a plain JSON array, but every response
+	// (including the one returned by create/update themselves) echoes back
+	// the raw database column, which is a JSON-encoded string. They're typed
+	// as strings here and decoded with DecodeSSHStringList.
+	SSHSudoCommands  string `json:"sshSudoCommands"`
+	SSHCreateHomeDir bool   `json:"sshCreateHomeDir"`
+	SSHUnixGroups    string `json:"sshUnixGroups"`
+}
+
+// DecodeSSHStringList decodes a Role.SSHSudoCommands or Role.SSHUnixGroups
+// value (a JSON-encoded string containing a string array, or empty) into a
+// []string.
+func DecodeSSHStringList(raw string) ([]string, error) {
+	if raw == "" {
+		return nil, nil
+	}
+	var list []string
+	if err := json.Unmarshal([]byte(raw), &list); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
 
 type CreateRoleRequest struct {
-	Name                  string `json:"name"`
-	Description           string `json:"description,omitempty"`
-	RequireDeviceApproval *bool  `json:"requireDeviceApproval,omitempty"`
-	AllowSSH              *bool  `json:"allowSsh,omitempty"`
-	SSHSudoMode           string `json:"sshSudoMode,omitempty"`
+	Name                  string   `json:"name"`
+	Description           string   `json:"description,omitempty"`
+	RequireDeviceApproval *bool    `json:"requireDeviceApproval,omitempty"`
+	AllowSSH              *bool    `json:"allowSsh,omitempty"`
+	SSHSudoMode           string   `json:"sshSudoMode,omitempty"`
+	SSHSudoCommands       []string `json:"sshSudoCommands,omitempty"`
+	SSHCreateHomeDir      *bool    `json:"sshCreateHomeDir,omitempty"`
+	SSHUnixGroups         []string `json:"sshUnixGroups,omitempty"`
 }
 
 type UpdateRoleRequest struct {
-	Name                  *string `json:"name,omitempty"`
-	Description           *string `json:"description,omitempty"`
-	RequireDeviceApproval *bool   `json:"requireDeviceApproval,omitempty"`
-	AllowSSH              *bool   `json:"allowSsh,omitempty"`
-	SSHSudoMode           *string `json:"sshSudoMode,omitempty"`
+	Name                  *string  `json:"name,omitempty"`
+	Description           *string  `json:"description,omitempty"`
+	RequireDeviceApproval *bool    `json:"requireDeviceApproval,omitempty"`
+	AllowSSH              *bool    `json:"allowSsh,omitempty"`
+	SSHSudoMode           *string  `json:"sshSudoMode,omitempty"`
+	SSHSudoCommands       []string `json:"sshSudoCommands,omitempty"`
+	SSHCreateHomeDir      *bool    `json:"sshCreateHomeDir,omitempty"`
+	SSHUnixGroups         []string `json:"sshUnixGroups,omitempty"`
 }
 
 type listRolesResult struct {

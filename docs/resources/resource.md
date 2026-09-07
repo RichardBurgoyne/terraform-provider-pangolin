@@ -3,12 +3,12 @@
 page_title: "pangolin_resource Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages a Pangolin HTTP/SSH/RDP/VNC resource (a proxied endpoint). Raw TCP/UDP resources and inference-mode (AI gateway) resources are not yet supported by this provider. mode and domain_id changes replace the resource. Import using the format <org_id>:<resource_id>, e.g. terraform import pangolin_resource.example acme:5.
+  Manages a Pangolin resource (a proxied endpoint). mode and domain_id changes replace the resource. Import using the format <org_id>:<resource_id>, e.g. terraform import pangolin_resource.example acme:5.
 ---
 
 # pangolin_resource (Resource)
 
-Manages a Pangolin HTTP/SSH/RDP/VNC resource (a proxied endpoint). Raw TCP/UDP resources and inference-mode (AI gateway) resources are not yet supported by this provider. mode and domain_id changes replace the resource. Import using the format `<org_id>:<resource_id>`, e.g. `terraform import pangolin_resource.example acme:5`.
+Manages a Pangolin resource (a proxied endpoint). mode and domain_id changes replace the resource. Import using the format `<org_id>:<resource_id>`, e.g. `terraform import pangolin_resource.example acme:5`.
 
 ## Example Usage
 
@@ -27,24 +27,40 @@ resource "pangolin_resource" "example" {
 
 ### Required
 
-- `domain_id` (String) Domain ID this resource is served from.
-- `mode` (String) One of http, ssh, rdp, vnc. inference and raw tcp/udp modes are not supported by this provider.
+- `mode` (String) One of http, ssh, rdp, vnc, inference, tcp, udp. tcp and udp are raw (non-HTTP) resources: they require proxy_port, must not set domain_id/subdomain, and require the allow_raw_resources flag to be enabled in the Pangolin server config. inference is an AI gateway resource: it is domain-routed like http but may attach existing AI providers via ai_providers.
 - `name` (String) Display name of the resource.
 - `org_id` (String) Organization ID this resource belongs to.
 
 ### Optional
 
+- `ai_providers` (Attributes List) AI providers to attach to an inference-mode resource. Providers must already exist in Pangolin (this provider does not manage them). Only valid when mode is inference. (see [below for nested schema](#nestedatt--ai_providers))
 - `auth_daemon_mode` (String) One of site, remote, native. Only meaningful for mode = ssh.
 - `auth_daemon_port` (Number) Auth daemon port. Only meaningful for mode = ssh.
+- `domain_id` (String) Domain ID this resource is served from. Required for every mode except tcp/udp, and must be omitted for tcp/udp.
 - `enabled` (Boolean) Whether the resource is enabled.
 - `pam_mode` (String) SSH PAM mode: passthrough or push. Only meaningful for mode = ssh.
-- `post_auth_path` (String) Path to redirect to after authentication.
-- `ssl` (Boolean) Whether SSL is enabled.
+- `post_auth_path` (String) Path to redirect to after authentication. Not valid for tcp/udp resources.
+- `proxy_port` (Number) Public port for a raw tcp/udp resource. Required when mode is tcp or udp; must be omitted otherwise.
+- `proxy_protocol` (Boolean) Whether to send the PROXY protocol header to targets. Only valid for tcp/udp resources.
+- `proxy_protocol_version` (Number) PROXY protocol version (1 or 2) to send. Only valid for tcp/udp resources.
+- `ssl` (Boolean) Whether SSL is enabled. Not valid for tcp/udp resources.
 - `sticky_session` (Boolean) Whether to enable sticky sessions.
-- `subdomain` (String) Subdomain under domain_id.
+- `subdomain` (String) Subdomain under domain_id. Not valid for tcp/udp resources.
 
 ### Read-Only
 
-- `full_domain` (String) Fully-qualified domain this resource is reachable at.
+- `full_domain` (String) Fully-qualified domain this resource is reachable at. Empty for tcp/udp resources.
 - `nice_id` (String) Human-readable ID, unique per org.
 - `resource_id` (Number) Server-generated resource ID.
+
+<a id="nestedatt--ai_providers"></a>
+### Nested Schema for `ai_providers`
+
+Required:
+
+- `provider_id` (Number) ID of an existing AI provider in this organization.
+
+Optional:
+
+- `access_mode` (String) inherit (default, uses the provider's own allow/block lists) or select (uses this resource's selected subset of the provider's catalog).
+- `enabled` (Boolean) Whether this attachment is enabled.

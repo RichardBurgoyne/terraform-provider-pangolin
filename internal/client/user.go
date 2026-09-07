@@ -70,10 +70,18 @@ func (c *Client) UpdateOrgUser(ctx context.Context, orgID, userID string, in Upd
 	return c.do(ctx, http.MethodPost, "/org/"+orgID+"/user/"+userID, in, nil)
 }
 
-// AddUserRole adds one role to a user. There is no corresponding "remove
-// role" route in the integration API, so this is one-directional.
+// AddUserRole adds one role to a user.
 func (c *Client) AddUserRole(ctx context.Context, roleID int64, userID string) error {
 	return c.do(ctx, http.MethodPost, fmt.Sprintf("/role/%d/add/%s", roleID, userID), nil, nil)
+}
+
+// RemoveUserRole removes one role from a user. This route
+// (DELETE /user/:userId/remove-role/:roleId) is part of Pangolin's
+// commercial integration API, not the AGPL-licensed community build; against
+// a plain self-hosted community instance it returns 404, not a partial
+// success.
+func (c *Client) RemoveUserRole(ctx context.Context, userID string, roleID int64) error {
+	return c.do(ctx, http.MethodDelete, fmt.Sprintf("/user/%s/remove-role/%d", userID, roleID), nil, nil)
 }
 
 func (c *Client) DeleteOrgUser(ctx context.Context, orgID, userID string) error {

@@ -3,12 +3,12 @@
 page_title: "pangolin_user Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing. Import is not supported: GetOrgUser cannot recover email, idp_id, or role_ids, so an imported user would show a forced replacement on the very next plan.
+  Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported: the Pangolin API explicitly rejects user creation with type internal ("Internal users are not supported yet"), so this resource only supports OIDC-backed users. Removing an entry from role_ids calls the role-removal route (DELETE /user/:userId/remove-role/:roleId), which is part of Pangolin's commercial integration API; against a plain self-hosted community instance it fails with a clear error rather than silently doing nothing or being retried. Import is not supported: GetOrgUser cannot recover email, idp_id, or role_ids, so an imported user would show a forced replacement on the very next plan.
 ---
 
 # pangolin_user (Resource)
 
-Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing. Import is not supported: GetOrgUser cannot recover email, idp_id, or role_ids, so an imported user would show a forced replacement on the very next plan.
+Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported: the Pangolin API explicitly rejects user creation with type internal ("Internal users are not supported yet"), so this resource only supports OIDC-backed users. Removing an entry from role_ids calls the role-removal route (DELETE /user/:userId/remove-role/:roleId), which is part of Pangolin's commercial integration API; against a plain self-hosted community instance it fails with a clear error rather than silently doing nothing or being retried. Import is not supported: GetOrgUser cannot recover email, idp_id, or role_ids, so an imported user would show a forced replacement on the very next plan.
 
 ## Example Usage
 
@@ -29,7 +29,7 @@ resource "pangolin_user" "example" {
 
 - `idp_id` (Number) Numeric ID of the OIDC identity provider this user authenticates through.
 - `org_id` (String) Organization ID this user belongs to.
-- `role_ids` (List of Number) Role IDs to grant. Can only grow after creation (see resource description).
+- `role_ids` (List of Number) Role IDs to grant. Removing an entry requires a commercial Pangolin integration API route (see resource description); on a plain community instance role_ids can only grow after creation.
 - `username` (String) Username, lowercased server-side.
 
 ### Optional

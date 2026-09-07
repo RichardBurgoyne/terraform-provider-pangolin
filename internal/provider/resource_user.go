@@ -41,7 +41,7 @@ func (r *userResource) Metadata(ctx context.Context, req resource.MetadataReques
 func (r *userResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replace := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported by the Pangolin integration API. role_ids can only grow after creation: the API has no route to remove a role from a user, so removing an entry from role_ids will produce an error rather than silently doing nothing. Import is not supported: GetOrgUser cannot recover email, idp_id, or role_ids, so an imported user would show a forced replacement on the very next plan.",
+		Description: "Manages an OIDC-backed org user in Pangolin. Internal (password-based) users are not yet supported: the Pangolin API explicitly rejects user creation with type internal (\"Internal users are not supported yet\"), so this resource only supports OIDC-backed users. Removing an entry from role_ids calls the role-removal route (DELETE /user/:userId/remove-role/:roleId), which is part of Pangolin's commercial integration API; against a plain self-hosted community instance it fails with a clear error rather than silently doing nothing or being retried. Import is not supported: GetOrgUser cannot recover email, idp_id, or role_ids, so an imported user would show a forced replacement on the very next plan.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":           schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this user belongs to."},
 			"user_id":          schema.StringAttribute{Computed: true, Description: "Server-generated user ID."},
@@ -49,7 +49,7 @@ func (r *userResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"email":            schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Email address."},
 			"name":             schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Display name."},
 			"idp_id":           schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Numeric ID of the OIDC identity provider this user authenticates through."},
-			"role_ids":         schema.ListAttribute{Required: true, ElementType: types.Int64Type, Description: "Role IDs to grant. Can only grow after creation (see resource description)."},
+			"role_ids":         schema.ListAttribute{Required: true, ElementType: types.Int64Type, Description: "Role IDs to grant. Removing an entry requires a commercial Pangolin integration API route (see resource description); on a plain community instance role_ids can only grow after creation."},
 			"auto_provisioned": schema.BoolAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}, Description: "Whether this user was auto-provisioned."},
 		},
 	}
@@ -154,8 +154,6 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	// Validate role changes BEFORE any mutations. If a removal is needed,
-	// return error immediately without calling any API methods.
 	var planRoleIDs, stateRoleIDs []int64
 	resp.Diagnostics.Append(plan.RoleIDs.ElementsAs(ctx, &planRoleIDs, false)...)
 	resp.Diagnostics.Append(state.RoleIDs.ElementsAs(ctx, &stateRoleIDs, false)...)
@@ -171,22 +169,27 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	for _, id := range planRoleIDs {
 		planned[id] = true
 	}
-	for _, id := range stateRoleIDs {
-		if !planned[id] {
-			resp.Diagnostics.AddError(
-				"Cannot remove role from user",
-				fmt.Sprintf("The Pangolin integration API has no route to remove role %d from this user. Destroy and recreate the pangolin_user resource, or remove the role via the Pangolin dashboard and then run terraform apply -refresh-only.", id),
-			)
-			return
-		}
-	}
 
-	// Role validation passed, now perform mutations.
 	if !plan.AutoProvisioned.IsUnknown() {
 		v := plan.AutoProvisioned.ValueBool()
 		if err := r.client.UpdateOrgUser(ctx, state.OrgID.ValueString(), state.UserID.ValueString(), client.UpdateOrgUserRequest{AutoProvisioned: &v}); err != nil {
 			resp.Diagnostics.AddError("Error updating user", err.Error())
 			return
+		}
+	}
+
+	for _, id := range stateRoleIDs {
+		if !planned[id] {
+			if err := r.client.RemoveUserRole(ctx, state.UserID.ValueString(), id); err != nil {
+				resp.Diagnostics.AddError(
+					"Error removing role from user",
+					fmt.Sprintf(
+						"Failed to remove role %d: %s\n\nThis route (DELETE /user/:userId/remove-role/:roleId) is part of Pangolin's commercial integration API. Against a plain self-hosted community instance it does not exist and this call will always fail; in that case, destroy and recreate the pangolin_user resource, or remove the role via the Pangolin dashboard and then run terraform apply -refresh-only.",
+						id, err.Error(),
+					),
+				)
+				return
+			}
 		}
 	}
 
