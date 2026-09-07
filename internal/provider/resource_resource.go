@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -72,6 +73,18 @@ type pangolinResourceModel struct {
 
 	// Inference mode fields. Only valid when mode is inference.
 	AIProviders types.List `tfsdk:"ai_providers"`
+
+	// Update-only http-family fields. See the comment on
+	// client.PangolinResource for the default-policy indirection affecting
+	// SSO/EmailWhitelistEnabled/ApplyRules/SkipToIdpID. Not valid for raw
+	// tcp/udp resources.
+	SSO                   types.Bool   `tfsdk:"sso"`
+	EmailWhitelistEnabled types.Bool   `tfsdk:"email_whitelist_enabled"`
+	ApplyRules            types.Bool   `tfsdk:"apply_rules"`
+	SkipToIdpID           types.Int64  `tfsdk:"skip_to_idp_id"`
+	TLSServerName         types.String `tfsdk:"tls_server_name"`
+	SetHostHeader         types.String `tfsdk:"set_host_header"`
+	HeadersJSON           types.String `tfsdk:"headers_json"`
 }
 
 func (r *pangolinResourceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -119,6 +132,42 @@ func (r *pangolinResourceResource) Schema(ctx context.Context, req resource.Sche
 				Optional:    true,
 				Computed:    true,
 				Description: "PROXY protocol version (1 or 2) to send. Only valid for tcp/udp resources.",
+			},
+
+			"sso": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Whether SSO is required to access this resource. Update-only: stored on the resource's default policy, so it retains the server default (true) until first set. Not valid for tcp/udp resources.",
+			},
+			"email_whitelist_enabled": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Whether access is restricted to whitelisted emails. Update-only (see sso). Not valid for tcp/udp resources.",
+			},
+			"apply_rules": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Whether resource rules (IP/path-based access rules) are applied to this resource. Update-only (see sso). Not valid for tcp/udp resources.",
+			},
+			"skip_to_idp_id": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "IdP ID to skip directly to for authentication, bypassing the login page's IdP picker. Update-only (see sso). Not valid for tcp/udp resources.",
+			},
+			"tls_server_name": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "TLS server name (SNI) to present to the target. Update-only: not settable at creation. Not valid for tcp/udp resources.",
+			},
+			"set_host_header": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Custom Host header to send to the target. Update-only: not settable at creation. Not valid for tcp/udp resources.",
+			},
+			"headers_json": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Extra headers sent to the target, as a JSON array of {name, value} objects, e.g. `[{\"name\":\"X-Foo\",\"value\":\"bar\"}]`. Modeled as a JSON string rather than a nested list because the Pangolin API itself is inconsistent about this field's wire format across endpoints (same reasoning as pangolin_target's hc_headers_json). Update-only: not settable at creation. Not valid for tcp/udp resources.",
 			},
 
 			"ai_providers": schema.ListNestedAttribute{
@@ -175,15 +224,25 @@ func (r *pangolinResourceResource) ValidateConfig(ctx context.Context, req resou
 			resp.Diagnostics.AddAttributeError(path.Root("proxy_port"), "Missing proxy_port", fmt.Sprintf("proxy_port is required when mode is %q.", mode))
 		}
 		httpOnly := map[string]bool{
-			"domain_id":        isSet(config.DomainID),
-			"subdomain":        isSet(config.Subdomain),
-			"post_auth_path":   isSet(config.PostAuthPath),
-			"pam_mode":         isSet(config.PamMode),
-			"auth_daemon_mode": isSet(config.AuthDaemonMode),
-			"auth_daemon_port": isSet(config.AuthDaemonPort),
-			"ssl":              isSet(config.SSL),
+			"domain_id":               isSet(config.DomainID),
+			"subdomain":               isSet(config.Subdomain),
+			"post_auth_path":          isSet(config.PostAuthPath),
+			"pam_mode":                isSet(config.PamMode),
+			"auth_daemon_mode":        isSet(config.AuthDaemonMode),
+			"auth_daemon_port":        isSet(config.AuthDaemonPort),
+			"ssl":                     isSet(config.SSL),
+			"sso":                     isSet(config.SSO),
+			"email_whitelist_enabled": isSet(config.EmailWhitelistEnabled),
+			"apply_rules":             isSet(config.ApplyRules),
+			"skip_to_idp_id":          isSet(config.SkipToIdpID),
+			"tls_server_name":         isSet(config.TLSServerName),
+			"set_host_header":         isSet(config.SetHostHeader),
+			"headers_json":            isSet(config.HeadersJSON),
 		}
-		for _, name := range []string{"domain_id", "subdomain", "post_auth_path", "pam_mode", "auth_daemon_mode", "auth_daemon_port", "ssl"} {
+		for _, name := range []string{
+			"domain_id", "subdomain", "post_auth_path", "pam_mode", "auth_daemon_mode", "auth_daemon_port", "ssl",
+			"sso", "email_whitelist_enabled", "apply_rules", "skip_to_idp_id", "tls_server_name", "set_host_header", "headers_json",
+		} {
 			if httpOnly[name] {
 				resp.Diagnostics.AddAttributeError(path.Root(name), "Invalid attribute for mode "+mode, fmt.Sprintf("%s is not valid when mode is %q.", name, mode))
 			}
@@ -210,6 +269,37 @@ func (r *pangolinResourceResource) ValidateConfig(ctx context.Context, req resou
 	if mode != "inference" && isSet(config.AIProviders) && len(config.AIProviders.Elements()) > 0 {
 		resp.Diagnostics.AddAttributeError(path.Root("ai_providers"), "Invalid attribute for mode "+mode, fmt.Sprintf("ai_providers is only valid when mode is \"inference\", not %q.", mode))
 	}
+}
+
+// resourceHeadersFromPlan parses a JSON-string headers_json plan value into
+// the wire format the API expects for update requests.
+func resourceHeadersFromPlan(v types.String) ([]client.HCHeader, error) {
+	if v.IsUnknown() || v.IsNull() || v.ValueString() == "" {
+		return nil, nil
+	}
+	var headers []client.HCHeader
+	if err := json.Unmarshal([]byte(v.ValueString()), &headers); err != nil {
+		return nil, fmt.Errorf("headers_json must be a JSON array of {name, value} objects: %w", err)
+	}
+	return headers, nil
+}
+
+// resourceHeadersToState re-encodes a PangolinResource's Headers (which may
+// have come back from the API as a real array or as a JSON-encoded string,
+// depending on the endpoint) into a canonical JSON string for state.
+func resourceHeadersToState(raw any) (types.String, error) {
+	headers, err := client.DecodeHCHeaders(raw)
+	if err != nil {
+		return types.StringNull(), err
+	}
+	if len(headers) == 0 {
+		return types.StringValue("[]"), nil
+	}
+	b, err := json.Marshal(headers)
+	if err != nil {
+		return types.StringNull(), err
+	}
+	return types.StringValue(string(b)), nil
 }
 
 func aiProvidersFromPlan(ctx context.Context, list types.List) ([]client.ResourceAIProviderAttachment, diag.Diagnostics) {
@@ -303,7 +393,42 @@ func (r *pangolinResourceResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	setPangolinResourceModelFromAPI(&plan, created)
+	final := created
+	if !isRawMode(mode) {
+		// sso, email_whitelist_enabled, apply_rules, skip_to_idp_id,
+		// tls_server_name, set_host_header and headers_json aren't part of
+		// the create request (the API doesn't accept them there), and
+		// CreateResource's response reports their zero value regardless of
+		// the resource's actual (default-policy-derived) state. A follow-up
+		// call is required either way: to apply any of them the plan
+		// configured, or - if none were configured - to read back their true
+		// values instead of the misleading zeroes from the create response.
+		update, hasUpdate, diags := followUpUpdateForNewResource(&plan)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if hasUpdate {
+			updated, err := r.client.UpdateResource(ctx, created.ResourceID, update)
+			if err != nil {
+				resp.Diagnostics.AddError("Error applying initial settings to resource", err.Error())
+				return
+			}
+			final = updated
+		} else {
+			refreshed, err := r.client.GetResource(ctx, created.ResourceID)
+			if err != nil {
+				resp.Diagnostics.AddError("Error reading newly created resource", err.Error())
+				return
+			}
+			final = refreshed
+		}
+	}
+
+	resp.Diagnostics.Append(setPangolinResourceModelFromAPI(&plan, final)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	if mode == "inference" {
 		resp.Diagnostics.Append(r.refreshAIProviders(ctx, &plan)...)
@@ -315,6 +440,58 @@ func (r *pangolinResourceResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// followUpUpdateForNewResource builds an UpdateResourceRequest containing
+// only the update-only fields (sso, email_whitelist_enabled, apply_rules,
+// skip_to_idp_id, tls_server_name, set_host_header, headers_json) the plan
+// explicitly configures. hasUpdate is false when none were configured.
+func followUpUpdateForNewResource(plan *pangolinResourceModel) (client.UpdateResourceRequest, bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	var update client.UpdateResourceRequest
+	hasUpdate := false
+
+	if !plan.SSO.IsUnknown() && !plan.SSO.IsNull() {
+		v := plan.SSO.ValueBool()
+		update.SSO = &v
+		hasUpdate = true
+	}
+	if !plan.EmailWhitelistEnabled.IsUnknown() && !plan.EmailWhitelistEnabled.IsNull() {
+		v := plan.EmailWhitelistEnabled.ValueBool()
+		update.EmailWhitelistEnabled = &v
+		hasUpdate = true
+	}
+	if !plan.ApplyRules.IsUnknown() && !plan.ApplyRules.IsNull() {
+		v := plan.ApplyRules.ValueBool()
+		update.ApplyRules = &v
+		hasUpdate = true
+	}
+	if !plan.SkipToIdpID.IsUnknown() && !plan.SkipToIdpID.IsNull() {
+		v := plan.SkipToIdpID.ValueInt64()
+		update.SkipToIdpID = &v
+		hasUpdate = true
+	}
+	if !plan.TLSServerName.IsUnknown() && !plan.TLSServerName.IsNull() {
+		v := plan.TLSServerName.ValueString()
+		update.TLSServerName = &v
+		hasUpdate = true
+	}
+	if !plan.SetHostHeader.IsUnknown() && !plan.SetHostHeader.IsNull() {
+		v := plan.SetHostHeader.ValueString()
+		update.SetHostHeader = &v
+		hasUpdate = true
+	}
+	if !plan.HeadersJSON.IsUnknown() && !plan.HeadersJSON.IsNull() {
+		headers, err := resourceHeadersFromPlan(plan.HeadersJSON)
+		if err != nil {
+			diags.AddError("Invalid headers_json", err.Error())
+			return update, false, diags
+		}
+		update.Headers = headers
+		hasUpdate = true
+	}
+
+	return update, hasUpdate, diags
 }
 
 func (r *pangolinResourceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -334,7 +511,10 @@ func (r *pangolinResourceResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	setPangolinResourceModelFromAPI(&state, res)
+	resp.Diagnostics.Append(setPangolinResourceModelFromAPI(&state, res)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	if res.Mode == "inference" {
 		resp.Diagnostics.Append(r.refreshAIProviders(ctx, &state)...)
@@ -404,6 +584,38 @@ func (r *pangolinResourceResource) Update(ctx context.Context, req resource.Upda
 			v := plan.AuthDaemonPort.ValueInt64()
 			in.AuthDaemonPort = &v
 		}
+		if !plan.SSO.IsUnknown() {
+			v := plan.SSO.ValueBool()
+			in.SSO = &v
+		}
+		if !plan.EmailWhitelistEnabled.IsUnknown() {
+			v := plan.EmailWhitelistEnabled.ValueBool()
+			in.EmailWhitelistEnabled = &v
+		}
+		if !plan.ApplyRules.IsUnknown() {
+			v := plan.ApplyRules.ValueBool()
+			in.ApplyRules = &v
+		}
+		if !plan.SkipToIdpID.IsUnknown() && !plan.SkipToIdpID.IsNull() {
+			v := plan.SkipToIdpID.ValueInt64()
+			in.SkipToIdpID = &v
+		}
+		if !plan.TLSServerName.IsUnknown() {
+			v := plan.TLSServerName.ValueString()
+			in.TLSServerName = &v
+		}
+		if !plan.SetHostHeader.IsUnknown() {
+			v := plan.SetHostHeader.ValueString()
+			in.SetHostHeader = &v
+		}
+		if !plan.HeadersJSON.IsUnknown() {
+			headers, err := resourceHeadersFromPlan(plan.HeadersJSON)
+			if err != nil {
+				resp.Diagnostics.AddError("Invalid headers_json", err.Error())
+				return
+			}
+			in.Headers = headers
+		}
 	}
 
 	updated, err := r.client.UpdateResource(ctx, state.ResourceID.ValueInt64(), in)
@@ -412,7 +624,10 @@ func (r *pangolinResourceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	setPangolinResourceModelFromAPI(&plan, updated)
+	resp.Diagnostics.Append(setPangolinResourceModelFromAPI(&plan, updated)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	if mode == "inference" {
 		attachments, diags := aiProvidersFromPlan(ctx, plan.AIProviders)
@@ -482,7 +697,8 @@ func (r *pangolinResourceResource) refreshAIProviders(ctx context.Context, model
 	return diags
 }
 
-func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.PangolinResource) {
+func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.PangolinResource) diag.Diagnostics {
+	var diags diag.Diagnostics
 	model.ResourceID = types.Int64Value(res.ResourceID)
 	model.NiceID = types.StringValue(res.NiceID)
 	model.Name = types.StringValue(res.Name)
@@ -511,9 +727,37 @@ func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.P
 		}
 		model.ProxyProtocol = types.BoolValue(res.ProxyProtocol)
 		model.ProxyProtocolVersion = types.Int64Value(res.ProxyProtocolVersion)
+
+		model.SSO = types.BoolNull()
+		model.EmailWhitelistEnabled = types.BoolNull()
+		model.ApplyRules = types.BoolNull()
+		model.SkipToIdpID = types.Int64Null()
+		model.TLSServerName = types.StringNull()
+		model.SetHostHeader = types.StringNull()
+		model.HeadersJSON = types.StringNull()
 	} else {
 		model.ProxyPort = types.Int64Null()
 		model.ProxyProtocol = types.BoolNull()
 		model.ProxyProtocolVersion = types.Int64Null()
+
+		model.SSO = types.BoolValue(res.SSO)
+		model.EmailWhitelistEnabled = types.BoolValue(res.EmailWhitelistEnabled)
+		model.ApplyRules = types.BoolValue(res.ApplyRules)
+		if res.SkipToIdpID != 0 {
+			model.SkipToIdpID = types.Int64Value(res.SkipToIdpID)
+		} else {
+			model.SkipToIdpID = types.Int64Null()
+		}
+		model.TLSServerName = types.StringValue(res.TLSServerName)
+		model.SetHostHeader = types.StringValue(res.SetHostHeader)
+
+		headersJSON, err := resourceHeadersToState(res.Headers)
+		if err != nil {
+			diags.AddError("Error decoding headers_json", err.Error())
+			return diags
+		}
+		model.HeadersJSON = headersJSON
 	}
+
+	return diags
 }

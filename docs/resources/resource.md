@@ -34,18 +34,25 @@ resource "pangolin_resource" "example" {
 ### Optional
 
 - `ai_providers` (Attributes List) AI providers to attach to an inference-mode resource. Providers must already exist in Pangolin (this provider does not manage them). Only valid when mode is inference. (see [below for nested schema](#nestedatt--ai_providers))
+- `apply_rules` (Boolean) Whether resource rules (IP/path-based access rules) are applied to this resource. Update-only (see sso). Not valid for tcp/udp resources.
 - `auth_daemon_mode` (String) One of site, remote, native. Only meaningful for mode = ssh.
 - `auth_daemon_port` (Number) Auth daemon port. Only meaningful for mode = ssh.
 - `domain_id` (String) Domain ID this resource is served from. Required for every mode except tcp/udp, and must be omitted for tcp/udp.
+- `email_whitelist_enabled` (Boolean) Whether access is restricted to whitelisted emails. Update-only (see sso). Not valid for tcp/udp resources.
 - `enabled` (Boolean) Whether the resource is enabled.
+- `headers_json` (String) Extra headers sent to the target, as a JSON array of {name, value} objects, e.g. `[{"name":"X-Foo","value":"bar"}]`. Modeled as a JSON string rather than a nested list because the Pangolin API itself is inconsistent about this field's wire format across endpoints (same reasoning as pangolin_target's hc_headers_json). Update-only: not settable at creation. Not valid for tcp/udp resources.
 - `pam_mode` (String) SSH PAM mode: passthrough or push. Only meaningful for mode = ssh.
 - `post_auth_path` (String) Path to redirect to after authentication. Not valid for tcp/udp resources.
 - `proxy_port` (Number) Public port for a raw tcp/udp resource. Required when mode is tcp or udp; must be omitted otherwise.
 - `proxy_protocol` (Boolean) Whether to send the PROXY protocol header to targets. Only valid for tcp/udp resources.
 - `proxy_protocol_version` (Number) PROXY protocol version (1 or 2) to send. Only valid for tcp/udp resources.
+- `set_host_header` (String) Custom Host header to send to the target. Update-only: not settable at creation. Not valid for tcp/udp resources.
+- `skip_to_idp_id` (Number) IdP ID to skip directly to for authentication, bypassing the login page's IdP picker. Update-only (see sso). Not valid for tcp/udp resources.
 - `ssl` (Boolean) Whether SSL is enabled. Not valid for tcp/udp resources.
+- `sso` (Boolean) Whether SSO is required to access this resource. Update-only: stored on the resource's default policy, so it retains the server default (true) until first set. Not valid for tcp/udp resources.
 - `sticky_session` (Boolean) Whether to enable sticky sessions.
 - `subdomain` (String) Subdomain under domain_id. Not valid for tcp/udp resources.
+- `tls_server_name` (String) TLS server name (SNI) to present to the target. Update-only: not settable at creation. Not valid for tcp/udp resources.
 
 ### Read-Only
 
