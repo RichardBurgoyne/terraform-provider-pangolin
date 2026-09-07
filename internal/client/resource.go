@@ -24,6 +24,29 @@ type PangolinResource struct {
 	ProxyPort            int64  `json:"proxyPort"`
 	ProxyProtocol        bool   `json:"proxyProtocol"`
 	ProxyProtocolVersion int64  `json:"proxyProtocolVersion"`
+
+	// The following are update-only fields (not settable at create time) and,
+	// for SSO/EmailWhitelistEnabled/ApplyRules/SkipToIdpID, are actually
+	// stored on the resource's auto-created default policy rather than the
+	// resource itself. GetResource and UpdateResource both merge the policy's
+	// values into the response under these same field names; CreateResource's
+	// response does not (it reports them as their zero value regardless of
+	// the policy), so a resource must be read or updated at least once after
+	// creation to see their true values. They don't apply to raw tcp/udp
+	// resources.
+	SSO                   bool   `json:"sso"`
+	EmailWhitelistEnabled bool   `json:"emailWhitelistEnabled"`
+	ApplyRules            bool   `json:"applyRules"`
+	SkipToIdpID           int64  `json:"skipToIdpId"`
+	TLSServerName         string `json:"tlsServerName"`
+	SetHostHeader         string `json:"setHostHeader"`
+
+	// Headers is a JSON array of {name, value} objects. Like Target.HCHeaders,
+	// the API is inconsistent about its wire format: GET returns a real JSON
+	// array, but the create/update responses return the raw database column,
+	// a JSON-encoded string. Decode with DecodeHCHeaders (shared with Target,
+	// since both fields have identical shape and the same quirk).
+	Headers any `json:"headers"`
 }
 
 type CreateResourceRequest struct {
@@ -72,6 +95,17 @@ type UpdateResourceRequest struct {
 	ProxyPort            *int64 `json:"proxyPort,omitempty"`
 	ProxyProtocol        *bool  `json:"proxyProtocol,omitempty"`
 	ProxyProtocolVersion *int64 `json:"proxyProtocolVersion,omitempty"`
+
+	// The following are additional http-family-only fields (see the same
+	// comment on PangolinResource for the default-policy indirection quirk
+	// affecting SSO/EmailWhitelistEnabled/ApplyRules/SkipToIdpID).
+	SSO                   *bool      `json:"sso,omitempty"`
+	EmailWhitelistEnabled *bool      `json:"emailWhitelistEnabled,omitempty"`
+	ApplyRules            *bool      `json:"applyRules,omitempty"`
+	SkipToIdpID           *int64     `json:"skipToIdpId,omitempty"`
+	TLSServerName         *string    `json:"tlsServerName,omitempty"`
+	SetHostHeader         *string    `json:"setHostHeader,omitempty"`
+	Headers               []HCHeader `json:"headers,omitempty"`
 }
 
 // ResourceAIProviderAttachment attaches an AI provider (already configured in

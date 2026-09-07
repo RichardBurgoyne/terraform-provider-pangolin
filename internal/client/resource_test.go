@@ -159,6 +159,45 @@ func TestSetAndListResourceAIProviders(t *testing.T) {
 	}
 }
 
+func TestUpdateResource_PolicyBackedFieldsAndHeaders(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"resourceId":            float64(5),
+				"mode":                  "http",
+				"sso":                   true,
+				"emailWhitelistEnabled": false,
+				"applyRules":            true,
+				"skipToIdpId":           float64(3),
+				// update responses echo the raw db column: a JSON-encoded string.
+				"headers": `[{"name":"X-Foo","value":"bar"}]`,
+			},
+			"success": true,
+		})
+	}))
+	defer server.Close()
+
+	c := New(server.URL, "token")
+	sso := true
+	res, err := c.UpdateResource(context.Background(), 5, UpdateResourceRequest{
+		SSO:     &sso,
+		Headers: []HCHeader{{Name: "X-Foo", Value: "bar"}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.SSO || res.ApplyRules != true || res.SkipToIdpID != 3 {
+		t.Errorf("unexpected policy-backed fields: %+v", res)
+	}
+	headers, err := DecodeHCHeaders(res.Headers)
+	if err != nil {
+		t.Fatalf("unexpected error decoding headers: %v", err)
+	}
+	if len(headers) != 1 || headers[0].Name != "X-Foo" {
+		t.Errorf("unexpected decoded headers: %#v", headers)
+	}
+}
+
 func TestDeleteResource(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/resource/5" {
