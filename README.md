@@ -50,18 +50,23 @@ for this repo, add its armored private key and passphrase as the
 key to the Terraform Registry publisher settings so the registry can
 verify signed releases.
 
-## Roadmap (v0.1.0 Deferrals)
+## Known limitations
 
-The following features are planned for v1.x:
+- **Internal (password-based) users are not supported.** The Pangolin
+  integration API itself rejects org user creation with `type = "internal"`
+  ("Internal users are not supported yet"), so `pangolin_user` only supports
+  OIDC-backed users. This isn't a client limitation to fast-follow on; it
+  will be revisited if/when the upstream API adds support.
+- **Removing a role from a `pangolin_user`** (a shrinking `role_ids`) calls a
+  role-removal route that is part of Pangolin's commercial integration API,
+  not the AGPL-licensed community build. Against a plain self-hosted
+  community instance it fails with a clear error rather than silently
+  succeeding; see the `pangolin_user` resource documentation for details.
 
-- Raw TCP/UDP resource modes (currently HTTP, SSH, RDP, VNC only)
-- Inference mode (AI gateway resources)
-- Target health checks
-- Fine-grained SSH sudo command/group lists
-- Internal (password-based) user support
-- User role removal capability
-
-See individual resource documentation in [docs/](./docs/) for details on each deferral.
+See individual resource documentation in [docs/](./docs/) for other
+mode-specific caveats (e.g. raw tcp/udp resources requiring the
+`allow_raw_resources` server flag, or SSH sudo command/group lists requiring
+a license/subscription with role-based SSH controls).
 
 ## License
 

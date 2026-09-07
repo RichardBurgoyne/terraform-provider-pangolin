@@ -53,6 +53,21 @@ func TestAddUserRole(t *testing.T) {
 	}
 }
 
+func TestRemoveUserRole(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/user/u1/remove-role/2" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+	}))
+	defer server.Close()
+
+	c := New(server.URL, "token")
+	if err := c.RemoveUserRole(context.Background(), "u1", 2); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestDeleteOrgUser(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/org/acme/user/u1" {

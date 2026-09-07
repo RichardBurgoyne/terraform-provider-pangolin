@@ -61,6 +61,79 @@ func TestGetRoleByID_FiltersListRoles(t *testing.T) {
 	}
 }
 
+func TestCreateRole_SendsSSHSudoFieldsAsPlainArrays(t *testing.T) {
+	var received map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&received)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"roleId":           float64(3),
+				"orgId":            "acme",
+				"name":             "Editors",
+				"sshSudoMode":      "commands",
+				"sshSudoCommands":  `["/usr/bin/systemctl restart nginx"]`,
+				"sshCreateHomeDir": true,
+				"sshUnixGroups":    `["docker"]`,
+			},
+			"success": true,
+		})
+	}))
+	defer server.Close()
+
+	c := New(server.URL, "token")
+	homeDir := true
+	role, err := c.CreateRole(context.Background(), "acme", CreateRoleRequest{
+		Name:             "Editors",
+		SSHSudoMode:      "commands",
+		SSHSudoCommands:  []string{"/usr/bin/systemctl restart nginx"},
+		SSHCreateHomeDir: &homeDir,
+		SSHUnixGroups:    []string{"docker"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The request body must send a plain JSON array, not a JSON-encoded string.
+	if cmds, ok := received["sshSudoCommands"].([]any); !ok || len(cmds) != 1 || cmds[0] != "/usr/bin/systemctl restart nginx" {
+		t.Errorf("expected sshSudoCommands to be sent as a plain array, got %#v", received["sshSudoCommands"])
+	}
+
+	// The response echoes back a JSON-encoded string, which must decode cleanly.
+	commands, err := DecodeSSHStringList(role.SSHSudoCommands)
+	if err != nil {
+		t.Fatalf("unexpected error decoding sshSudoCommands: %v", err)
+	}
+	if len(commands) != 1 || commands[0] != "/usr/bin/systemctl restart nginx" {
+		t.Errorf("unexpected decoded sshSudoCommands: %#v", commands)
+	}
+
+	groups, err := DecodeSSHStringList(role.SSHUnixGroups)
+	if err != nil {
+		t.Fatalf("unexpected error decoding sshUnixGroups: %v", err)
+	}
+	if len(groups) != 1 || groups[0] != "docker" {
+		t.Errorf("unexpected decoded sshUnixGroups: %#v", groups)
+	}
+}
+
+func TestDecodeSSHStringList_Empty(t *testing.T) {
+	list, err := DecodeSSHStringList("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if list != nil {
+		t.Errorf("expected nil list for empty string, got %#v", list)
+	}
+
+	list, err = DecodeSSHStringList("[]")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(list) != 0 {
+		t.Errorf("expected empty list, got %#v", list)
+	}
+}
+
 func TestDeleteRole(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete || r.URL.Path != "/role/3" {

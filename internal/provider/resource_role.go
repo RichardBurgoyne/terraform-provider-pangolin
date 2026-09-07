@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -35,6 +36,9 @@ type roleResourceModel struct {
 	RequireDeviceApproval types.Bool   `tfsdk:"require_device_approval"`
 	AllowSSH              types.Bool   `tfsdk:"allow_ssh"`
 	SSHSudoMode           types.String `tfsdk:"ssh_sudo_mode"`
+	SSHSudoCommands       types.List   `tfsdk:"ssh_sudo_commands"`
+	SSHCreateHomeDir      types.Bool   `tfsdk:"ssh_create_home_dir"`
+	SSHUnixGroups         types.List   `tfsdk:"ssh_unix_groups"`
 }
 
 func (r *roleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -43,7 +47,7 @@ func (r *roleResource) Metadata(ctx context.Context, req resource.MetadataReques
 
 func (r *roleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a Pangolin role. Fine-grained SSH sudo command/group lists are not yet supported by this provider. Import using the format `<org_id>:<role_id>`, e.g. `terraform import pangolin_role.example acme:5`.",
+		Description: "Manages a Pangolin role. ssh_sudo_commands, ssh_create_home_dir, and ssh_unix_groups require a Pangolin subscription or license that includes role-based SSH controls; on an unlicensed org the server silently ignores them, which shows up as a persistent plan diff rather than an error. Import using the format `<org_id>:<role_id>`, e.g. `terraform import pangolin_role.example acme:5`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":                  schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Organization ID this role belongs to."},
 			"role_id":                 schema.Int64Attribute{Computed: true, Description: "Server-generated role ID."},
@@ -52,6 +56,23 @@ func (r *roleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"require_device_approval": schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether devices used by members of this role require approval."},
 			"allow_ssh":               schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether members of this role can sign SSH keys."},
 			"ssh_sudo_mode":           schema.StringAttribute{Optional: true, Computed: true, Description: "One of none, full, commands."},
+			"ssh_sudo_commands": schema.ListAttribute{
+				Optional:    true,
+				Computed:    true,
+				ElementType: types.StringType,
+				Description: "Sudo commands members of this role may run over SSH. Only meaningful when ssh_sudo_mode is commands. Requires a license/subscription with role-based SSH controls.",
+			},
+			"ssh_create_home_dir": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Whether a home directory is created for members of this role when they connect over SSH. Requires a license/subscription with role-based SSH controls.",
+			},
+			"ssh_unix_groups": schema.ListAttribute{
+				Optional:    true,
+				Computed:    true,
+				ElementType: types.StringType,
+				Description: "Unix groups members of this role are added to over SSH. Requires a license/subscription with role-based SSH controls.",
+			},
 		},
 	}
 }
@@ -90,6 +111,19 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if !plan.SSHSudoMode.IsUnknown() {
 		in.SSHSudoMode = plan.SSHSudoMode.ValueString()
 	}
+	if !plan.SSHCreateHomeDir.IsUnknown() {
+		v := plan.SSHCreateHomeDir.ValueBool()
+		in.SSHCreateHomeDir = &v
+	}
+	if !plan.SSHSudoCommands.IsUnknown() {
+		resp.Diagnostics.Append(plan.SSHSudoCommands.ElementsAs(ctx, &in.SSHSudoCommands, false)...)
+	}
+	if !plan.SSHUnixGroups.IsUnknown() {
+		resp.Diagnostics.Append(plan.SSHUnixGroups.ElementsAs(ctx, &in.SSHUnixGroups, false)...)
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	role, err := r.client.CreateRole(ctx, plan.OrgID.ValueString(), in)
 	if err != nil {
@@ -97,7 +131,10 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	setRoleModelFromAPI(&plan, role)
+	resp.Diagnostics.Append(setRoleModelFromAPI(ctx, &plan, role)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -118,7 +155,10 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	setRoleModelFromAPI(&state, role)
+	resp.Diagnostics.Append(setRoleModelFromAPI(ctx, &state, role)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -149,6 +189,19 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		v := plan.SSHSudoMode.ValueString()
 		in.SSHSudoMode = &v
 	}
+	if !plan.SSHCreateHomeDir.IsUnknown() {
+		v := plan.SSHCreateHomeDir.ValueBool()
+		in.SSHCreateHomeDir = &v
+	}
+	if !plan.SSHSudoCommands.IsUnknown() {
+		resp.Diagnostics.Append(plan.SSHSudoCommands.ElementsAs(ctx, &in.SSHSudoCommands, false)...)
+	}
+	if !plan.SSHUnixGroups.IsUnknown() {
+		resp.Diagnostics.Append(plan.SSHUnixGroups.ElementsAs(ctx, &in.SSHUnixGroups, false)...)
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	role, err := r.client.UpdateRole(ctx, state.RoleID.ValueInt64(), in)
 	if err != nil {
@@ -160,7 +213,10 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	// update response may not echo orgId back, and setRoleModelFromAPI writes
 	// it unconditionally, so preserve the known-good value across the call.
 	orgID := plan.OrgID
-	setRoleModelFromAPI(&plan, role)
+	resp.Diagnostics.Append(setRoleModelFromAPI(ctx, &plan, role)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	plan.OrgID = orgID
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -197,7 +253,21 @@ func (r *roleResource) ImportState(ctx context.Context, req resource.ImportState
 	}
 }
 
-func setRoleModelFromAPI(model *roleResourceModel, role *client.Role) {
+// decodeSSHStringListAttr decodes a Role.SSHSudoCommands/SSHUnixGroups value
+// (a JSON-encoded string, see client.DecodeSSHStringList) into a
+// types.List for state.
+func decodeSSHStringListAttr(ctx context.Context, raw string) (types.List, diag.Diagnostics) {
+	list, err := client.DecodeSSHStringList(raw)
+	if err != nil {
+		var diags diag.Diagnostics
+		diags.AddError("Error decoding SSH string list", err.Error())
+		return types.ListNull(types.StringType), diags
+	}
+	return types.ListValueFrom(ctx, types.StringType, list)
+}
+
+func setRoleModelFromAPI(ctx context.Context, model *roleResourceModel, role *client.Role) diag.Diagnostics {
+	var diags diag.Diagnostics
 	model.RoleID = types.Int64Value(role.RoleID)
 	model.OrgID = types.StringValue(role.OrgID)
 	model.Name = types.StringValue(role.Name)
@@ -205,4 +275,15 @@ func setRoleModelFromAPI(model *roleResourceModel, role *client.Role) {
 	model.RequireDeviceApproval = types.BoolValue(role.RequireDeviceApproval)
 	model.AllowSSH = types.BoolValue(role.AllowSSH)
 	model.SSHSudoMode = types.StringValue(role.SSHSudoMode)
+	model.SSHCreateHomeDir = types.BoolValue(role.SSHCreateHomeDir)
+
+	sudoCommands, d := decodeSSHStringListAttr(ctx, role.SSHSudoCommands)
+	diags.Append(d...)
+	model.SSHSudoCommands = sudoCommands
+
+	unixGroups, d := decodeSSHStringListAttr(ctx, role.SSHUnixGroups)
+	diags.Append(d...)
+	model.SSHUnixGroups = unixGroups
+
+	return diags
 }
