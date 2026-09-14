@@ -232,8 +232,12 @@ func setSiteModelFromAPI(model *siteResourceModel, site *client.Site) {
 	model.AutoUpdateOverrideOrg = types.BoolValue(site.AutoUpdateOverrideOrg)
 	if site.NewtID != "" {
 		model.NewtID = types.StringValue(site.NewtID)
+	} else {
+		model.NewtID = types.StringNull()
 	}
 	if site.Secret != "" {
 		model.Secret = types.StringValue(site.Secret)
+	} else {
+		model.Secret = types.StringNull()
 	}
 }
