@@ -48,7 +48,7 @@ resource "pangolin_resource" "example" {
 - `proxy_protocol_version` (Number) PROXY protocol version (1 or 2) to send. Only valid for tcp/udp resources.
 - `set_host_header` (String) Custom Host header to send to the target. Update-only: not settable at creation. Not valid for tcp/udp resources.
 - `skip_to_idp_id` (Number) IdP ID to skip directly to for authentication, bypassing the login page's IdP picker. Update-only (see sso). Not valid for tcp/udp resources.
-- `ssl` (Boolean) Whether SSL is enabled. Not valid for tcp/udp resources.
+- `ssl` (Boolean) Whether SSL is enabled. Update-only: not settable at creation, so a newly created resource keeps the server's default (true) until first set. Not valid for tcp/udp resources.
 - `sso` (Boolean) Whether SSO is required to access this resource. Update-only: stored on the resource's default policy, so it retains the server default (true) until first set. Not valid for tcp/udp resources.
 - `sticky_session` (Boolean) Whether to enable sticky sessions.
 - `subdomain` (String) Subdomain under domain_id. Not valid for tcp/udp resources.

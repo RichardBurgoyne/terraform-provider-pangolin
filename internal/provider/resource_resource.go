@@ -117,7 +117,7 @@ func (r *pangolinResourceResource) Schema(ctx context.Context, req resource.Sche
 			"auth_daemon_mode": schema.StringAttribute{Optional: true, Computed: true, Description: "One of site, remote, native. Only meaningful for mode = ssh."},
 			"auth_daemon_port": schema.Int64Attribute{Optional: true, Description: "Auth daemon port. Only meaningful for mode = ssh."},
 			"enabled":          schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether the resource is enabled."},
-			"ssl":              schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether SSL is enabled. Not valid for tcp/udp resources."},
+			"ssl":              schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether SSL is enabled. Update-only: not settable at creation, so a newly created resource keeps the server's default (true) until first set. Not valid for tcp/udp resources."},
 
 			"proxy_port": schema.Int64Attribute{
 				Optional:    true,
@@ -395,7 +395,7 @@ func (r *pangolinResourceResource) Create(ctx context.Context, req resource.Crea
 
 	final := created
 	if !isRawMode(mode) {
-		// sso, email_whitelist_enabled, apply_rules, skip_to_idp_id,
+		// ssl, sso, email_whitelist_enabled, apply_rules, skip_to_idp_id,
 		// tls_server_name, set_host_header and headers_json aren't part of
 		// the create request (the API doesn't accept them there), and
 		// CreateResource's response reports their zero value regardless of
@@ -443,14 +443,20 @@ func (r *pangolinResourceResource) Create(ctx context.Context, req resource.Crea
 }
 
 // followUpUpdateForNewResource builds an UpdateResourceRequest containing
-// only the update-only fields (sso, email_whitelist_enabled, apply_rules,
-// skip_to_idp_id, tls_server_name, set_host_header, headers_json) the plan
-// explicitly configures. hasUpdate is false when none were configured.
+// only the update-only fields (ssl, sso, email_whitelist_enabled,
+// apply_rules, skip_to_idp_id, tls_server_name, set_host_header,
+// headers_json) the plan explicitly configures. hasUpdate is false when none
+// were configured.
 func followUpUpdateForNewResource(plan *pangolinResourceModel) (client.UpdateResourceRequest, bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var update client.UpdateResourceRequest
 	hasUpdate := false
 
+	if !plan.SSL.IsUnknown() && !plan.SSL.IsNull() {
+		v := plan.SSL.ValueBool()
+		update.SSL = &v
+		hasUpdate = true
+	}
 	if !plan.SSO.IsUnknown() && !plan.SSO.IsNull() {
 		v := plan.SSO.ValueBool()
 		update.SSO = &v
@@ -715,8 +721,15 @@ func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.P
 	model.PostAuthPath = types.StringValue(res.PostAuthPath)
 	model.PamMode = types.StringValue(res.PamMode)
 	model.AuthDaemonMode = types.StringValue(res.AuthDaemonMode)
-	if res.AuthDaemonPort != 0 {
+	// The API always returns a nonzero authDaemonPort, even for non-ssh
+	// resources where it's meaningless internal plumbing. auth_daemon_port
+	// isn't Computed in the schema, so reflecting that value for a mode
+	// where the user never configured it would make Terraform see the
+	// provider producing a value the plan said would stay null.
+	if res.Mode == "ssh" && res.AuthDaemonPort != 0 {
 		model.AuthDaemonPort = types.Int64Value(res.AuthDaemonPort)
+	} else {
+		model.AuthDaemonPort = types.Int64Null()
 	}
 	model.Enabled = types.BoolValue(res.Enabled)
 	model.SSL = types.BoolValue(res.SSL)
