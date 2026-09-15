@@ -60,8 +60,9 @@ func (r *siteResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"type":    schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "One of newt, wireguard, or local."},
 			"exit_node_id": schema.Int64Attribute{
 				Optional:      true,
+				Computed:      true,
 				PlanModifiers: []planmodifier.Int64{},
-				Description:   "Exit node ID. Required for type = wireguard.",
+				Description:   "Exit node ID. Required for type = wireguard; server-assigned for type = newt.",
 			},
 			"pub_key":                  schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: replace, Description: "WireGuard public key. Required for type = wireguard."},
 			"subnet":                   schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: replace, Description: "WireGuard tunnel subnet. Required for type = wireguard."},

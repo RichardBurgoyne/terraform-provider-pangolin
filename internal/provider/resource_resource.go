@@ -580,12 +580,18 @@ func (r *pangolinResourceResource) Update(ctx context.Context, req resource.Upda
 		}
 		domainID := plan.DomainID.ValueString()
 		in.DomainID = &domainID
-		postAuthPath := plan.PostAuthPath.ValueString()
-		in.PostAuthPath = &postAuthPath
-		pamMode := plan.PamMode.ValueString()
-		in.PamMode = &pamMode
-		authDaemonMode := plan.AuthDaemonMode.ValueString()
-		in.AuthDaemonMode = &authDaemonMode
+		if !plan.PostAuthPath.IsUnknown() {
+			v := plan.PostAuthPath.ValueString()
+			in.PostAuthPath = &v
+		}
+		if !plan.PamMode.IsUnknown() && plan.PamMode.ValueString() != "" {
+			v := plan.PamMode.ValueString()
+			in.PamMode = &v
+		}
+		if !plan.AuthDaemonMode.IsUnknown() && plan.AuthDaemonMode.ValueString() != "" {
+			v := plan.AuthDaemonMode.ValueString()
+			in.AuthDaemonMode = &v
+		}
 		if !plan.AuthDaemonPort.IsNull() {
 			v := plan.AuthDaemonPort.ValueInt64()
 			in.AuthDaemonPort = &v

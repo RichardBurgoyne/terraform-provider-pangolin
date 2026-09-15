@@ -40,7 +40,7 @@ output "example_site_newt_credentials" {
 - `auto_update_enabled` (Boolean) Whether the site's Newt agent auto-updates.
 - `auto_update_override_org` (Boolean) Whether this site overrides the org's auto-update setting.
 - `docker_socket_enabled` (Boolean) Whether the site can access the Docker socket.
-- `exit_node_id` (Number) Exit node ID. Required for type = wireguard.
+- `exit_node_id` (Number) Exit node ID. Required for type = wireguard; server-assigned for type = newt.
 - `nice_id` (String) Human-readable ID, unique per org. Server-generated if omitted.
 - `pub_key` (String) WireGuard public key. Required for type = wireguard.
 - `subnet` (String) WireGuard tunnel subnet. Required for type = wireguard.
