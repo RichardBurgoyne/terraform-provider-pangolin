@@ -139,7 +139,7 @@ type listResourceAIProvidersResult struct {
 
 func (c *Client) CreateResource(ctx context.Context, orgID string, in CreateResourceRequest) (*PangolinResource, error) {
 	var out PangolinResource
-	if err := c.do(ctx, http.MethodPut, "/org/"+orgID+"/resource", in, &out); err != nil {
+	if err := c.do(ctx, http.MethodPut, "/org/"+pathEscape(orgID)+"/resource", in, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

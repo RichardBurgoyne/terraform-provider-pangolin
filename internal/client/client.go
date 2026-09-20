@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -35,8 +37,15 @@ func (e *APIError) Error() string {
 }
 
 func IsNotFound(err error) bool {
-	apiErr, ok := err.(*APIError)
-	return ok && apiErr.StatusCode == http.StatusNotFound
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound
+}
+
+// pathEscape escapes a user-supplied ID for safe use as a single URL path
+// segment (e.g. an org, domain, or user ID), preventing it from being
+// misinterpreted as a path separator or query string.
+func pathEscape(s string) string {
+	return url.PathEscape(s)
 }
 
 type envelope struct {

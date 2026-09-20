@@ -83,6 +83,7 @@ func (r *aiProviderResource) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 			"api_key": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Sensitive:   true,
 				Description: "API key used to authenticate to the upstream provider. Returned back from the API in plaintext on every read, so Terraform can keep state in sync; still marked sensitive to keep it out of plan/apply output.",
 			},

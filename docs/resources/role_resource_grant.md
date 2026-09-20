@@ -3,12 +3,12 @@
 page_title: "pangolin_role_resource_grant Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Grants a role access to a Pangolin resource. There is no update: changing either ID replaces the grant.
+  Grants a role access to a Pangolin resource. There is no update: changing either ID replaces the grant. Import using the format <resource_id>:<role_id>, e.g. terraform import pangolin_role_resource_grant.example 5:2.
 ---
 
 # pangolin_role_resource_grant (Resource)
 
-Grants a role access to a Pangolin resource. There is no update: changing either ID replaces the grant.
+Grants a role access to a Pangolin resource. There is no update: changing either ID replaces the grant. Import using the format `<resource_id>:<role_id>`, e.g. `terraform import pangolin_role_resource_grant.example 5:2`.
 
 ## Example Usage
 

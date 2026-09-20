@@ -31,3 +31,23 @@ func TestAIProviderResource_Schema(t *testing.T) {
 		}
 	}
 }
+
+func TestAIProviderResource_OptionalComputedAttributes(t *testing.T) {
+	r := NewAIProviderResource()
+	var resp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &resp)
+
+	for _, name := range []string{"api_key"} {
+		attr, ok := resp.Schema.Attributes[name]
+		if !ok {
+			t.Errorf("expected attribute %q", name)
+			continue
+		}
+		if !attr.IsOptional() {
+			t.Errorf("expected %q to be optional", name)
+		}
+		if !attr.IsComputed() {
+			t.Errorf("expected %q to be computed (it is set unconditionally from the API response)", name)
+		}
+	}
+}

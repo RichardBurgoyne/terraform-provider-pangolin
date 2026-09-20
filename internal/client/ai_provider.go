@@ -56,7 +56,7 @@ type createOrGetAIProviderResult struct {
 
 func (c *Client) CreateAIProvider(ctx context.Context, orgID string, in CreateAIProviderRequest) (*AIProvider, error) {
 	var out createOrGetAIProviderResult
-	if err := c.do(ctx, http.MethodPut, "/org/"+orgID+"/ai-provider", in, &out); err != nil {
+	if err := c.do(ctx, http.MethodPut, "/org/"+pathEscape(orgID)+"/ai-provider", in, &out); err != nil {
 		return nil, err
 	}
 	return &out.Provider, nil

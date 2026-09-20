@@ -33,7 +33,7 @@ type UpdateDomainRequest struct {
 
 func (c *Client) CreateDomain(ctx context.Context, orgID string, in CreateDomainRequest) (*CreateDomainResult, error) {
 	var out CreateDomainResult
-	if err := c.do(ctx, http.MethodPut, "/org/"+orgID+"/domain", in, &out); err != nil {
+	if err := c.do(ctx, http.MethodPut, "/org/"+pathEscape(orgID)+"/domain", in, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -41,7 +41,7 @@ func (c *Client) CreateDomain(ctx context.Context, orgID string, in CreateDomain
 
 func (c *Client) GetDomain(ctx context.Context, orgID, domainID string) (*Domain, error) {
 	var out Domain
-	if err := c.do(ctx, http.MethodGet, "/org/"+orgID+"/domain/"+domainID, nil, &out); err != nil {
+	if err := c.do(ctx, http.MethodGet, "/org/"+pathEscape(orgID)+"/domain/"+pathEscape(domainID), nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -49,12 +49,12 @@ func (c *Client) GetDomain(ctx context.Context, orgID, domainID string) (*Domain
 
 func (c *Client) UpdateDomain(ctx context.Context, orgID, domainID string, in UpdateDomainRequest) (*Domain, error) {
 	var out Domain
-	if err := c.do(ctx, http.MethodPost, "/org/"+orgID+"/domain/"+domainID, in, &out); err != nil {
+	if err := c.do(ctx, http.MethodPost, "/org/"+pathEscape(orgID)+"/domain/"+pathEscape(domainID), in, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
 }
 
 func (c *Client) DeleteDomain(ctx context.Context, orgID, domainID string) error {
-	return c.do(ctx, http.MethodDelete, "/org/"+orgID+"/domain/"+domainID, nil, nil)
+	return c.do(ctx, http.MethodDelete, "/org/"+pathEscape(orgID)+"/domain/"+pathEscape(domainID), nil, nil)
 }

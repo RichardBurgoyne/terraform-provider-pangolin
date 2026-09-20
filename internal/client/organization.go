@@ -31,12 +31,12 @@ func (c *Client) GetOrganization(ctx context.Context, orgID string) (*Organizati
 	var wrapper struct {
 		Org Organization `json:"org"`
 	}
-	if err := c.do(ctx, http.MethodGet, "/org/"+orgID, nil, &wrapper); err != nil {
+	if err := c.do(ctx, http.MethodGet, "/org/"+pathEscape(orgID), nil, &wrapper); err != nil {
 		return nil, err
 	}
 	return &wrapper.Org, nil
 }
 
 func (c *Client) DeleteOrganization(ctx context.Context, orgID string) error {
-	return c.do(ctx, http.MethodDelete, "/org/"+orgID, nil, nil)
+	return c.do(ctx, http.MethodDelete, "/org/"+pathEscape(orgID), nil, nil)
 }

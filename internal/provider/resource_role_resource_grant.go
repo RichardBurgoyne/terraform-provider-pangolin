@@ -3,7 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -13,7 +16,10 @@ import (
 	"github.com/RichardBurgoyne/terraform-provider-pangolin/internal/client"
 )
 
-var _ resource.Resource = &roleResourceGrantResource{}
+var (
+	_ resource.Resource                = &roleResourceGrantResource{}
+	_ resource.ResourceWithImportState = &roleResourceGrantResource{}
+)
 
 func NewRoleResourceGrantResource() resource.Resource { return &roleResourceGrantResource{} }
 
@@ -33,7 +39,7 @@ func (r *roleResourceGrantResource) Metadata(ctx context.Context, req resource.M
 func (r *roleResourceGrantResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replace := []planmodifier.Int64{int64planmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Grants a role access to a Pangolin resource. There is no update: changing either ID replaces the grant.",
+		Description: "Grants a role access to a Pangolin resource. There is no update: changing either ID replaces the grant. Import using the format `<resource_id>:<role_id>`, e.g. `terraform import pangolin_role_resource_grant.example 5:2`.",
 		Attributes: map[string]schema.Attribute{
 			"resource_id": schema.Int64Attribute{Required: true, PlanModifiers: replace, Description: "Resource ID to grant access to."},
 			"role_id":     schema.Int64Attribute{Required: true, PlanModifiers: replace, Description: "Role ID being granted access."},
@@ -103,6 +109,29 @@ func (r *roleResourceGrantResource) Update(ctx context.Context, req resource.Upd
 	var plan roleResourceGrantModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *roleResourceGrantResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <resource_id>:<role_id>, e.g. "5:2"`)
+		return
+	}
+	resourceID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Import ID", "resource_id must be a numeric ID: "+err.Error())
+		return
+	}
+	roleID, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Import ID", "role_id must be a numeric ID: "+err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), resourceID)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_id"), roleID)...)
 }
 
 func (r *roleResourceGrantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

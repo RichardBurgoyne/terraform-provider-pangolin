@@ -3,12 +3,12 @@
 page_title: "pangolin_user_resource_grant Resource - terraform-provider-pangolin"
 subcategory: ""
 description: |-
-  Grants a user access to a Pangolin resource. There is no update: changing either ID replaces the grant.
+  Grants a user access to a Pangolin resource. There is no update: changing either ID replaces the grant. Import using the format <resource_id>:<user_id>, e.g. terraform import pangolin_user_resource_grant.example 5:abc123.
 ---
 
 # pangolin_user_resource_grant (Resource)
 
-Grants a user access to a Pangolin resource. There is no update: changing either ID replaces the grant.
+Grants a user access to a Pangolin resource. There is no update: changing either ID replaces the grant. Import using the format `<resource_id>:<user_id>`, e.g. `terraform import pangolin_user_resource_grant.example 5:abc123`.
 
 ## Example Usage
 
