@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	_ resource.Resource                = &siteResource{}
-	_ resource.ResourceWithImportState = &siteResource{}
+	_ resource.Resource                   = &siteResource{}
+	_ resource.ResourceWithImportState    = &siteResource{}
+	_ resource.ResourceWithValidateConfig = &siteResource{}
 )
 
 func NewSiteResource() resource.Resource { return &siteResource{} }
@@ -59,10 +60,9 @@ func (r *siteResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"name":    schema.StringAttribute{Required: true, Description: "Display name of the site."},
 			"type":    schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "One of newt, wireguard, or local."},
 			"exit_node_id": schema.Int64Attribute{
-				Optional:      true,
-				Computed:      true,
-				PlanModifiers: []planmodifier.Int64{},
-				Description:   "Exit node ID. Required for type = wireguard; server-assigned for type = newt.",
+				Optional:    true,
+				Computed:    true,
+				Description: "Exit node ID. Required for type = wireguard; server-assigned for type = newt.",
 			},
 			"pub_key":                  schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: replace, Description: "WireGuard public key. Required for type = wireguard."},
 			"subnet":                   schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: replace, Description: "WireGuard tunnel subnet. Required for type = wireguard."},
@@ -86,6 +86,32 @@ func (r *siteResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 	r.client = c
+}
+
+func (r *siteResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config siteResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if config.Type.IsUnknown() || config.Type.IsNull() {
+		return
+	}
+
+	if config.Type.ValueString() != "wireguard" {
+		return
+	}
+
+	if config.PubKey.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("pub_key"), "Missing pub_key", `pub_key is required when type is "wireguard".`)
+	}
+	if config.Subnet.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("subnet"), "Missing subnet", `subnet is required when type is "wireguard".`)
+	}
+	if config.ExitNodeID.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("exit_node_id"), "Missing exit_node_id", `exit_node_id is required when type is "wireguard".`)
+	}
 }
 
 func (r *siteResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

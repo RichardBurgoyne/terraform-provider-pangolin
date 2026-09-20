@@ -3,7 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -14,7 +17,10 @@ import (
 	"github.com/RichardBurgoyne/terraform-provider-pangolin/internal/client"
 )
 
-var _ resource.Resource = &userResourceGrantResource{}
+var (
+	_ resource.Resource                = &userResourceGrantResource{}
+	_ resource.ResourceWithImportState = &userResourceGrantResource{}
+)
 
 func NewUserResourceGrantResource() resource.Resource { return &userResourceGrantResource{} }
 
@@ -33,7 +39,7 @@ func (r *userResourceGrantResource) Metadata(ctx context.Context, req resource.M
 
 func (r *userResourceGrantResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Grants a user access to a Pangolin resource. There is no update: changing either ID replaces the grant.",
+		Description: "Grants a user access to a Pangolin resource. There is no update: changing either ID replaces the grant. Import using the format `<resource_id>:<user_id>`, e.g. `terraform import pangolin_user_resource_grant.example 5:abc123`.",
 		Attributes: map[string]schema.Attribute{
 			"resource_id": schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Resource ID to grant access to."},
 			"user_id":     schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "User ID being granted access."},
@@ -103,6 +109,24 @@ func (r *userResourceGrantResource) Update(ctx context.Context, req resource.Upd
 	var plan userResourceGrantModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *userResourceGrantResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	parts := strings.SplitN(req.ID, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <resource_id>:<user_id>, e.g. "5:abc123"`)
+		return
+	}
+	resourceID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Import ID", "resource_id must be a numeric ID: "+err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), resourceID)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), parts[1])...)
 }
 
 func (r *userResourceGrantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

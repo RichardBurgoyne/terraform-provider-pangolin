@@ -42,7 +42,7 @@ type UpdateSiteRequest struct {
 
 func (c *Client) CreateSite(ctx context.Context, orgID string, in CreateSiteRequest) (*Site, error) {
 	var out Site
-	if err := c.do(ctx, http.MethodPut, "/org/"+orgID+"/site", in, &out); err != nil {
+	if err := c.do(ctx, http.MethodPut, "/org/"+pathEscape(orgID)+"/site", in, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

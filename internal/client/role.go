@@ -75,7 +75,7 @@ type listRolesResult struct {
 
 func (c *Client) CreateRole(ctx context.Context, orgID string, in CreateRoleRequest) (*Role, error) {
 	var out Role
-	if err := c.do(ctx, http.MethodPut, "/org/"+orgID+"/role", in, &out); err != nil {
+	if err := c.do(ctx, http.MethodPut, "/org/"+pathEscape(orgID)+"/role", in, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -83,7 +83,7 @@ func (c *Client) CreateRole(ctx context.Context, orgID string, in CreateRoleRequ
 
 func (c *Client) ListRoles(ctx context.Context, orgID string) ([]Role, error) {
 	var out listRolesResult
-	if err := c.do(ctx, http.MethodGet, "/org/"+orgID+"/roles", nil, &out); err != nil {
+	if err := c.do(ctx, http.MethodGet, "/org/"+pathEscape(orgID)+"/roles", nil, &out); err != nil {
 		return nil, err
 	}
 	return out.Roles, nil
