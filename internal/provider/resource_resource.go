@@ -85,6 +85,7 @@ type pangolinResourceModel struct {
 	TLSServerName         types.String `tfsdk:"tls_server_name"`
 	SetHostHeader         types.String `tfsdk:"set_host_header"`
 	HeadersJSON           types.String `tfsdk:"headers_json"`
+	ResponseHeadersJSON   types.String `tfsdk:"response_headers_json"`
 }
 
 func (r *pangolinResourceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -169,6 +170,11 @@ func (r *pangolinResourceResource) Schema(ctx context.Context, req resource.Sche
 				Computed:    true,
 				Description: "Extra headers sent to the target, as a JSON array of {name, value} objects, e.g. `[{\"name\":\"X-Foo\",\"value\":\"bar\"}]`. Modeled as a JSON string rather than a nested list because the Pangolin API itself is inconsistent about this field's wire format across endpoints (same reasoning as pangolin_target's hc_headers_json). Update-only: not settable at creation. Not valid for tcp/udp resources.",
 			},
+			"response_headers_json": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Extra headers added to responses sent back to the client, as a JSON array of {name, value} objects, e.g. `[{\"name\":\"X-Frame-Options\",\"value\":\"DENY\"}]`. Requires Pangolin 1.24 or later. Update-only: not settable at creation. Not valid for tcp/udp resources.",
+			},
 
 			"ai_providers": schema.ListNestedAttribute{
 				Optional:    true,
@@ -238,10 +244,11 @@ func (r *pangolinResourceResource) ValidateConfig(ctx context.Context, req resou
 			"tls_server_name":         isSet(config.TLSServerName),
 			"set_host_header":         isSet(config.SetHostHeader),
 			"headers_json":            isSet(config.HeadersJSON),
+			"response_headers_json":   isSet(config.ResponseHeadersJSON),
 		}
 		for _, name := range []string{
 			"domain_id", "subdomain", "post_auth_path", "pam_mode", "auth_daemon_mode", "auth_daemon_port", "ssl",
-			"sso", "email_whitelist_enabled", "apply_rules", "skip_to_idp_id", "tls_server_name", "set_host_header", "headers_json",
+			"sso", "email_whitelist_enabled", "apply_rules", "skip_to_idp_id", "tls_server_name", "set_host_header", "headers_json", "response_headers_json",
 		} {
 			if httpOnly[name] {
 				resp.Diagnostics.AddAttributeError(path.Root(name), "Invalid attribute for mode "+mode, fmt.Sprintf("%s is not valid when mode is %q.", name, mode))
@@ -493,7 +500,16 @@ func followUpUpdateForNewResource(plan *pangolinResourceModel) (client.UpdateRes
 			diags.AddError("Invalid headers_json", err.Error())
 			return update, false, diags
 		}
-		update.Headers = headers
+		update.RequestHeaders = &headers
+		hasUpdate = true
+	}
+	if !plan.ResponseHeadersJSON.IsUnknown() && !plan.ResponseHeadersJSON.IsNull() {
+		headers, err := resourceHeadersFromPlan(plan.ResponseHeadersJSON)
+		if err != nil {
+			diags.AddError("Invalid response_headers_json", err.Error())
+			return update, false, diags
+		}
+		update.ResponseHeaders = &headers
 		hasUpdate = true
 	}
 
@@ -626,7 +642,15 @@ func (r *pangolinResourceResource) Update(ctx context.Context, req resource.Upda
 				resp.Diagnostics.AddError("Invalid headers_json", err.Error())
 				return
 			}
-			in.Headers = headers
+			in.RequestHeaders = &headers
+		}
+		if !plan.ResponseHeadersJSON.IsUnknown() {
+			headers, err := resourceHeadersFromPlan(plan.ResponseHeadersJSON)
+			if err != nil {
+				resp.Diagnostics.AddError("Invalid response_headers_json", err.Error())
+				return
+			}
+			in.ResponseHeaders = &headers
 		}
 	}
 
@@ -754,6 +778,7 @@ func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.P
 		model.TLSServerName = types.StringNull()
 		model.SetHostHeader = types.StringNull()
 		model.HeadersJSON = types.StringNull()
+		model.ResponseHeadersJSON = types.StringNull()
 	} else {
 		model.ProxyPort = types.Int64Null()
 		model.ProxyProtocol = types.BoolNull()
@@ -770,12 +795,25 @@ func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.P
 		model.TLSServerName = types.StringValue(res.TLSServerName)
 		model.SetHostHeader = types.StringValue(res.SetHostHeader)
 
-		headersJSON, err := resourceHeadersToState(res.Headers)
+		// Pangolin 1.24 renamed headers to requestHeaders; fall back to the
+		// legacy field for older servers.
+		rawRequest := res.RequestHeaders
+		if rawRequest == nil {
+			rawRequest = res.Headers
+		}
+		headersJSON, err := resourceHeadersToState(rawRequest)
 		if err != nil {
 			diags.AddError("Error decoding headers_json", err.Error())
 			return diags
 		}
 		model.HeadersJSON = headersJSON
+
+		responseJSON, err := resourceHeadersToState(res.ResponseHeaders)
+		if err != nil {
+			diags.AddError("Error decoding response_headers_json", err.Error())
+			return diags
+		}
+		model.ResponseHeadersJSON = responseJSON
 	}
 
 	return diags

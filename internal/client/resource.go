@@ -47,6 +47,12 @@ type PangolinResource struct {
 	// a JSON-encoded string. Decode with DecodeHCHeaders (shared with Target,
 	// since both fields have identical shape and the same quirk).
 	Headers any `json:"headers"`
+
+	// RequestHeaders and ResponseHeaders are the current field names (Pangolin
+	// 1.24 and later); "headers" above is the legacy alias for RequestHeaders.
+	// Same wire-format quirk as Headers applies.
+	RequestHeaders  any `json:"requestHeaders"`
+	ResponseHeaders any `json:"responseHeaders"`
 }
 
 type CreateResourceRequest struct {
@@ -99,13 +105,18 @@ type UpdateResourceRequest struct {
 	// The following are additional http-family-only fields (see the same
 	// comment on PangolinResource for the default-policy indirection quirk
 	// affecting SSO/EmailWhitelistEnabled/ApplyRules/SkipToIdpID).
-	SSO                   *bool      `json:"sso,omitempty"`
-	EmailWhitelistEnabled *bool      `json:"emailWhitelistEnabled,omitempty"`
-	ApplyRules            *bool      `json:"applyRules,omitempty"`
-	SkipToIdpID           *int64     `json:"skipToIdpId,omitempty"`
-	TLSServerName         *string    `json:"tlsServerName,omitempty"`
-	SetHostHeader         *string    `json:"setHostHeader,omitempty"`
-	Headers               []HCHeader `json:"headers,omitempty"`
+	SSO                   *bool   `json:"sso,omitempty"`
+	EmailWhitelistEnabled *bool   `json:"emailWhitelistEnabled,omitempty"`
+	ApplyRules            *bool   `json:"applyRules,omitempty"`
+	SkipToIdpID           *int64  `json:"skipToIdpId,omitempty"`
+	TLSServerName         *string `json:"tlsServerName,omitempty"`
+	SetHostHeader         *string `json:"setHostHeader,omitempty"`
+
+	// RequestHeaders and ResponseHeaders are pointers to slices so that a
+	// non-nil pointer to an empty slice is sent as [] (clearing the headers)
+	// while nil omits the field entirely.
+	RequestHeaders  *[]HCHeader `json:"requestHeaders,omitempty"`
+	ResponseHeaders *[]HCHeader `json:"responseHeaders,omitempty"`
 }
 
 // ResourceAIProviderAttachment attaches an AI provider (already configured in

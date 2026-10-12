@@ -41,7 +41,7 @@ func TestPangolinResourceResource_Schema(t *testing.T) {
 		"org_id", "resource_id", "name", "mode", "domain_id", "full_domain",
 		"proxy_port", "proxy_protocol", "proxy_protocol_version", "ai_providers",
 		"sso", "email_whitelist_enabled", "apply_rules", "skip_to_idp_id",
-		"tls_server_name", "set_host_header", "headers_json",
+		"tls_server_name", "set_host_header", "headers_json", "response_headers_json",
 	} {
 		if _, ok := resp.Schema.Attributes[name]; !ok {
 			t.Errorf("expected attribute %q", name)
