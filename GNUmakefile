@@ -11,7 +11,7 @@ lint:
 
 generate:
 	go generate ./...
-	tfplugindocs generate
+	tfplugindocs generate --provider-name pangolin
 
 fmt:
 	gofmt -s -w -e .
