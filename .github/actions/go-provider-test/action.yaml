@@ -62,9 +62,9 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
-        tfplugindocs generate
+        tfplugindocs generate --provider-name pangolin
         if [ -n "$(git status --porcelain docs/)" ]; then
-          echo "❌ Generated docs are out of date, run tfplugindocs generate"
+          echo "❌ Generated docs are out of date, run make generate"
           git status --porcelain docs/
           exit 1
         fi

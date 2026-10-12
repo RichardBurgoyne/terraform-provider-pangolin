@@ -2,9 +2,7 @@
 
 This is a Terraform provider for Pangolin, enabling infrastructure-as-code management of Pangolin resources through Terraform.
 
-## Usage
-
-To use this provider, add the following to your Terraform configuration:
+## Quick start
 
 ```hcl
 terraform {
@@ -16,13 +14,30 @@ terraform {
 }
 
 provider "pangolin" {
-  # Configuration options here
+  endpoint = "https://api.pangolin.example.com/v1" # or PANGOLIN_ENDPOINT
+  api_key  = var.pangolin_api_key                  # or PANGOLIN_API_KEY
 }
 ```
 
-## Documentation
+You need a Pangolin instance with the Integration API enabled and an API key created in the dashboard. The `endpoint` includes the version prefix (`/v1`).
 
-For detailed documentation on available resources and data sources, see the [docs](./docs/) directory.
+The [provider documentation](./docs/index.md) walks through publishing a first service end to end.
+
+## What it manages
+
+| Area | Resources |
+|---|---|
+| Organization | `pangolin_organization`, `pangolin_domain` |
+| Connectivity | `pangolin_site` |
+| Public resources | `pangolin_resource`, `pangolin_target`, `pangolin_resource_rule` |
+| Private resources | `pangolin_private_resource` |
+| Access | `pangolin_role`, `pangolin_user`, `pangolin_role_resource_grant`, `pangolin_user_resource_grant` |
+| Automation | `pangolin_api_key` |
+| AI gateway | `pangolin_ai_provider` |
+
+Data sources: `pangolin_organization`, `pangolin_domain`, `pangolin_site`, `pangolin_resource`, `pangolin_role`, `pangolin_user`.
+
+Tested against Pangolin 1.24. Per-resource documentation, examples and import formats are in [docs/](./docs/).
 
 ## Contributing
 
@@ -33,6 +48,7 @@ make build    # Build the provider
 make test     # Run tests
 make lint     # Run linter
 make fmt      # Format code
+make generate # Regenerate docs/ from the schema, templates/ and examples/
 ```
 
 See the [GNUmakefile](./GNUmakefile) for all available targets.

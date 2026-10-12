@@ -170,7 +170,8 @@ func TestUpdateResource_PolicyBackedFieldsAndHeaders(t *testing.T) {
 				"applyRules":            true,
 				"skipToIdpId":           float64(3),
 				// update responses echo the raw db column: a JSON-encoded string.
-				"headers": `[{"name":"X-Foo","value":"bar"}]`,
+				"requestHeaders":  `[{"name":"X-Foo","value":"bar"}]`,
+				"responseHeaders": []any{map[string]any{"name": "X-Frame-Options", "value": "DENY"}},
 			},
 			"success": true,
 		})
@@ -180,8 +181,8 @@ func TestUpdateResource_PolicyBackedFieldsAndHeaders(t *testing.T) {
 	c := New(server.URL, "token")
 	sso := true
 	res, err := c.UpdateResource(context.Background(), 5, UpdateResourceRequest{
-		SSO:     &sso,
-		Headers: []HCHeader{{Name: "X-Foo", Value: "bar"}},
+		SSO:            &sso,
+		RequestHeaders: &[]HCHeader{{Name: "X-Foo", Value: "bar"}},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -189,12 +190,16 @@ func TestUpdateResource_PolicyBackedFieldsAndHeaders(t *testing.T) {
 	if !res.SSO || res.ApplyRules != true || res.SkipToIdpID != 3 {
 		t.Errorf("unexpected policy-backed fields: %+v", res)
 	}
-	headers, err := DecodeHCHeaders(res.Headers)
+	headers, err := DecodeHCHeaders(res.RequestHeaders)
 	if err != nil {
 		t.Fatalf("unexpected error decoding headers: %v", err)
 	}
 	if len(headers) != 1 || headers[0].Name != "X-Foo" {
 		t.Errorf("unexpected decoded headers: %#v", headers)
+	}
+	respHeaders, err := DecodeHCHeaders(res.ResponseHeaders)
+	if err != nil || len(respHeaders) != 1 || respHeaders[0].Name != "X-Frame-Options" {
+		t.Errorf("unexpected response headers: %#v (err %v)", respHeaders, err)
 	}
 }
 
