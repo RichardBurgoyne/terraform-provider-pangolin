@@ -1,0 +1,1 @@
+terraform import pangolin_private_resource.example acme:12

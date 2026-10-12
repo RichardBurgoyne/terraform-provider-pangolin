@@ -1,0 +1,1 @@
+terraform import pangolin_user_resource_grant.example 5:abc123

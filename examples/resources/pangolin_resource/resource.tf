@@ -4,4 +4,18 @@ resource "pangolin_resource" "example" {
   mode      = "http"
   domain_id = pangolin_domain.example.domain_id
   subdomain = "app"
+
+  # Evaluate pangolin_resource_rule rules for this resource.
+  apply_rules = true
+
+  # Headers added to the request sent to the backend...
+  headers_json = jsonencode([
+    { name = "X-Forwarded-Team", value = "platform" },
+  ])
+
+  # ...and to the response sent back to the client (Pangolin 1.24+).
+  response_headers_json = jsonencode([
+    { name = "X-Frame-Options", value = "DENY" },
+    { name = "Referrer-Policy", value = "same-origin" },
+  ])
 }
