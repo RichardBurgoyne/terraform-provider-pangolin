@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -48,12 +49,15 @@ func (r *siteResource) Metadata(ctx context.Context, req resource.MetadataReques
 
 func (r *siteResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replace := []planmodifier.String{stringplanmodifier.RequiresReplace()}
+	// UseStateForUnknown stops an update to any other attribute from marking
+	// these server-assigned values unknown, which would force a replacement.
+	keepOrReplace := []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
 		Description: "Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, and auto_update_override_org can be updated after creation; every other attribute replaces the site if changed. Import using the format `<org_id>:<site_id>`, e.g. `terraform import pangolin_site.example acme:5`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":  schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this site belongs to."},
-			"site_id": schema.Int64Attribute{Computed: true, Description: "Server-generated site ID."},
-			"nice_id": schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: replace, Description: "Human-readable ID, unique per org. Server-generated if omitted."},
+			"site_id": schema.Int64Attribute{Computed: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}, Description: "Server-generated site ID."},
+			"nice_id": schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: keepOrReplace, Description: "Human-readable ID, unique per org. Server-generated if omitted."},
 			"name":    schema.StringAttribute{Required: true, Description: "Display name of the site."},
 			"type":    schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "One of newt, wireguard, or local."},
 			"exit_node_id": schema.Int64Attribute{
@@ -61,9 +65,9 @@ func (r *siteResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				Computed:    true,
 				Description: "Exit node ID. Required for type = wireguard; server-assigned for type = newt.",
 			},
-			"pub_key":                  schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: replace, Description: "WireGuard public key. Required for type = wireguard."},
-			"subnet":                   schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: replace, Description: "WireGuard tunnel subnet. Required for type = wireguard."},
-			"address":                  schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: replace, Description: "Client subnet address. Server-assigned if omitted."},
+			"pub_key":                  schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: keepOrReplace, Description: "WireGuard public key. Required for type = wireguard."},
+			"subnet":                   schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: keepOrReplace, Description: "WireGuard tunnel subnet. Required for type = wireguard."},
+			"address":                  schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: keepOrReplace, Description: "Client subnet address. Server-assigned if omitted."},
 			"newt_id":                  schema.StringAttribute{Computed: true, Sensitive: true, Description: "Newt agent ID (type = newt only). Only ever populated from the create response."},
 			"secret":                   schema.StringAttribute{Computed: true, Sensitive: true, Description: "Newt agent secret (type = newt only). Only ever populated from the create response."},
 			"docker_socket_enabled":    schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether the site can access the Docker socket."},
