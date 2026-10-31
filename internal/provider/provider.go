@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -75,14 +76,14 @@ func (p *pangolinProvider) Configure(ctx context.Context, req provider.Configure
 
 	if endpoint == "" {
 		resp.Diagnostics.AddAttributeError(
-			pathRoot("endpoint"),
+			path.Root("endpoint"),
 			"Missing Pangolin API Endpoint",
 			"Set the endpoint attribute or the PANGOLIN_ENDPOINT environment variable.",
 		)
 	}
 	if apiKey == "" {
 		resp.Diagnostics.AddAttributeError(
-			pathRoot("api_key"),
+			path.Root("api_key"),
 			"Missing Pangolin API Key",
 			"Set the api_key attribute or the PANGOLIN_API_KEY environment variable.",
 		)
@@ -111,6 +112,11 @@ func (p *pangolinProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewAIProviderResource,
 		NewResourceRuleResource,
 		NewPrivateResourceResource,
+		NewRedirectResource,
+		NewResourceMtlsResource,
+		NewLabelResource,
+		NewLabelAttachmentResource,
+		NewClientRoleResource,
 	}
 }
 

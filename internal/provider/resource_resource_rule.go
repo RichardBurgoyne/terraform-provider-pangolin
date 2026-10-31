@@ -2,12 +2,8 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -27,7 +23,7 @@ var (
 func NewResourceRuleResource() resource.Resource { return &resourceRuleResource{} }
 
 type resourceRuleResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type resourceRuleModel struct {
@@ -86,18 +82,6 @@ func (r *resourceRuleResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 		},
 	}
-}
-
-func (r *resourceRuleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
 }
 
 func (m *resourceRuleModel) fromAPI(rule *client.ResourceRule) {
@@ -180,28 +164,11 @@ func (r *resourceRuleResource) Delete(ctx context.Context, req resource.DeleteRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	err := r.client.DeleteResourceRule(ctx, state.ResourceID.ValueInt64(), state.RuleID.ValueInt64())
-	if err != nil && !client.IsNotFound(err) {
+	if err := client.IgnoreNotFound(r.client.DeleteResourceRule(ctx, state.ResourceID.ValueInt64(), state.RuleID.ValueInt64())); err != nil {
 		resp.Diagnostics.AddError("Error deleting resource rule", err.Error())
 	}
 }
 
 func (r *resourceRuleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <resource_id>:<rule_id>, e.g. "5:12"`)
-		return
-	}
-	resourceID, err := strconv.ParseInt(parts[0], 10, 64)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Import ID", "resource_id must be a numeric ID: "+err.Error())
-		return
-	}
-	ruleID, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Import ID", "rule_id must be a numeric ID: "+err.Error())
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), resourceID)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("rule_id"), ruleID)...)
+	importInt64Pair(ctx, req.ID, resp, "resource_id", "rule_id")
 }

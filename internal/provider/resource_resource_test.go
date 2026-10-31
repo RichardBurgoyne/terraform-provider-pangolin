@@ -42,6 +42,7 @@ func TestPangolinResourceResource_Schema(t *testing.T) {
 		"proxy_port", "proxy_protocol", "proxy_protocol_version", "ai_providers",
 		"sso", "email_whitelist_enabled", "apply_rules", "skip_to_idp_id",
 		"tls_server_name", "set_host_header", "headers_json", "response_headers_json",
+		"load_balancing_strategy", "forward_identity_headers",
 	} {
 		if _, ok := resp.Schema.Attributes[name]; !ok {
 			t.Errorf("expected attribute %q", name)
@@ -173,5 +174,17 @@ func TestPangolinResourceResource_OptionalComputedAttributes(t *testing.T) {
 		if !attr.IsComputed() {
 			t.Errorf("expected %q to be computed (it is set unconditionally from the API response)", name)
 		}
+	}
+}
+
+func TestPangolinResourceResource_ValidateConfig_RawModeRejectsLoadBalancing(t *testing.T) {
+	model := pangolinResourceModel{
+		Mode:                  types.StringValue("tcp"),
+		ProxyPort:             types.Int64Value(5432),
+		LoadBalancingStrategy: types.StringValue("p2c"),
+		AIProviders:           types.ListNull(aiProviderObjectType()),
+	}
+	if diags := validateConfig(t, &pangolinResourceResource{}, model); !diags.HasError() {
+		t.Fatal("expected a validation error when load_balancing_strategy is set on a tcp-mode resource")
 	}
 }

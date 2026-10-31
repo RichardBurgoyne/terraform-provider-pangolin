@@ -2,9 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -25,7 +22,7 @@ var (
 func NewUserResourceGrantResource() resource.Resource { return &userResourceGrantResource{} }
 
 type userResourceGrantResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type userResourceGrantModel struct {
@@ -45,18 +42,6 @@ func (r *userResourceGrantResource) Schema(ctx context.Context, req resource.Sch
 			"user_id":     schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "User ID being granted access."},
 		},
 	}
-}
-
-func (r *userResourceGrantResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
 }
 
 func (r *userResourceGrantResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -112,21 +97,16 @@ func (r *userResourceGrantResource) Update(ctx context.Context, req resource.Upd
 }
 
 func (r *userResourceGrantResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <resource_id>:<user_id>, e.g. "5:abc123"`)
+	first, second, ok := splitImportID(req.ID, "resource_id", "user_id", "5:abc123", &resp.Diagnostics)
+	if !ok {
 		return
 	}
-	resourceID, err := strconv.ParseInt(parts[0], 10, 64)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Import ID", "resource_id must be a numeric ID: "+err.Error())
+	resourceID, ok := parseImportInt64("resource_id", first, &resp.Diagnostics)
+	if !ok {
 		return
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), resourceID)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), parts[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("user_id"), second)...)
 }
 
 func (r *userResourceGrantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -135,7 +115,7 @@ func (r *userResourceGrantResource) Delete(ctx context.Context, req resource.Del
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.client.RemoveUserFromResource(ctx, state.ResourceID.ValueInt64(), state.UserID.ValueString()); err != nil {
+	if err := client.IgnoreNotFound(r.client.RemoveUserFromResource(ctx, state.ResourceID.ValueInt64(), state.UserID.ValueString())); err != nil {
 		resp.Diagnostics.AddError("Error revoking user access from resource", err.Error())
 	}
 }

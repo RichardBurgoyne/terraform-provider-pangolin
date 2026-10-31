@@ -2,13 +2,10 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/RichardBurgoyne/terraform-provider-pangolin/internal/client"
 )
 
 var _ datasource.DataSource = &domainDataSource{}
@@ -16,7 +13,7 @@ var _ datasource.DataSource = &domainDataSource{}
 func NewDomainDataSource() datasource.DataSource { return &domainDataSource{} }
 
 type domainDataSource struct {
-	client *client.Client
+	dataSourceClient
 }
 
 type domainDataSourceModel struct {
@@ -46,18 +43,6 @@ func (d *domainDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 			"verified":             schema.BoolAttribute{Computed: true},
 		},
 	}
-}
-
-func (d *domainDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	d.client = c
 }
 
 func (d *domainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

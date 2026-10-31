@@ -44,7 +44,7 @@ func TestDomainResource_Update_UsesStateDomainID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	r := &domainResource{client: client.New(server.URL, "test-token")}
+	r := &domainResource{resourceClient{client: client.New(server.URL, "test-token")}}
 
 	var schemaResp resource.SchemaResponse
 	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)

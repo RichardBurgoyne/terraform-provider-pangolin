@@ -2,10 +2,7 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -23,7 +20,7 @@ var (
 func NewAPIKeyResource() resource.Resource { return &apiKeyResource{} }
 
 type apiKeyResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type apiKeyResourceModel struct {
@@ -51,18 +48,6 @@ func (r *apiKeyResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			"action_ids": schema.ListAttribute{Optional: true, Computed: true, ElementType: types.StringType, Description: "Actions this key is permitted to perform. Replaces the full list on every change."},
 		},
 	}
-}
-
-func (r *apiKeyResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
 }
 
 func (r *apiKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -176,23 +161,11 @@ func (r *apiKeyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.client.DeleteAPIKey(ctx, state.OrgID.ValueString(), state.APIKeyID.ValueString()); err != nil {
+	if err := client.IgnoreNotFound(r.client.DeleteAPIKey(ctx, state.OrgID.ValueString(), state.APIKeyID.ValueString())); err != nil {
 		resp.Diagnostics.AddError("Error deleting API key", err.Error())
 	}
 }
 
 func (r *apiKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<api_key_id>, e.g. "acme:k1"`)
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("api_key_id"), parts[1])...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	importStringPair(ctx, req.ID, resp, "org_id", "api_key_id")
 }

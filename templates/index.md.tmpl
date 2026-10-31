@@ -17,11 +17,11 @@ With it you can describe a [Pangolin](https://github.com/fosrl/pangolin) deploym
 
 - Terraform 1.0 or later, or OpenTofu 1.6 or later.
 - A Pangolin instance (self-hosted or cloud) with the [Integration API](https://docs.pangolin.net/manage/integration-api) enabled. The provider talks to this API, not to the web UI.
-- The provider is tested against Pangolin 1.24. Some attributes need a recent server and say so in their description (for example `METHOD` rules and `response_headers_json` need 1.24).
+- The provider is tested against Pangolin 1.25. Some resources and attributes need a recent server and say so in their description (for example `pangolin_redirect` and `load_balancing_strategy` need 1.25).
 
 ### 2. Create an API key
 
-In the Pangolin dashboard, create an API key and grant it the actions your configuration needs. A root (server admin) key can manage organizations; an organization key is limited to one organization. The secret is shown once.
+In the Pangolin dashboard, create an API key and grant it the actions your configuration needs. Keys created before a Pangolin upgrade don't get new actions automatically, so grant them when you adopt a new feature. A root (server admin) key can manage organizations; an organization key is limited to one organization. The secret is shown once.
 
 ### 3. Configure the provider
 
@@ -111,9 +111,10 @@ Most resources support `terraform import`; the exact ID format is at the bottom 
 |---|---|
 | Organization | `pangolin_organization`, `pangolin_domain` |
 | Connectivity | `pangolin_site` |
-| Public resources | `pangolin_resource`, `pangolin_target`, `pangolin_resource_rule` |
+| Public resources | `pangolin_resource`, `pangolin_target`, `pangolin_resource_rule`, `pangolin_resource_mtls`, `pangolin_redirect` |
 | Private resources | `pangolin_private_resource` |
-| Access | `pangolin_role`, `pangolin_user`, `pangolin_role_resource_grant`, `pangolin_user_resource_grant` |
+| Access | `pangolin_role`, `pangolin_user`, `pangolin_role_resource_grant`, `pangolin_user_resource_grant`, `pangolin_client_role` |
+| Organizing | `pangolin_label`, `pangolin_label_attachment` |
 | Automation | `pangolin_api_key` |
 | AI gateway | `pangolin_ai_provider` |
 
@@ -124,6 +125,8 @@ Data sources exist for organizations, domains, sites, resources, roles and users
 - **Internal (password-based) users are not supported.** The Integration API rejects creating them, so `pangolin_user` only manages users from an OIDC identity provider.
 - **Removing a role from a user** (shrinking `role_ids` on `pangolin_user`) uses a route that exists only in Pangolin's commercial edition, and fails with a clear error on the community build.
 - Raw `tcp`/`udp` resources need the `allow_raw_resources` server flag, and SSH sudo command or group lists on roles need a license with role-based SSH controls. Each resource page notes its own caveats.
+- **`pangolin_client_role`** uses routes that exist only in Pangolin Enterprise Edition. Clients aren't managed by this provider, so `client_id` comes from the dashboard or API.
+- Blueprint export isn't available through the Integration API, so the provider can't read it.
 - `org_id` on the provider is currently informational; every resource takes its own `org_id`.
 
 {{ .SchemaMarkdown | trimspace }}

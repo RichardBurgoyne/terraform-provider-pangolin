@@ -2,14 +2,10 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -31,7 +27,7 @@ var (
 func NewPrivateResourceResource() resource.Resource { return &privateResourceResource{} }
 
 type privateResourceResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type privateResourceModel struct {
@@ -221,74 +217,6 @@ func (r *privateResourceResource) Schema(ctx context.Context, req resource.Schem
 	}
 }
 
-func (r *privateResourceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
-}
-
-func known[T interface {
-	IsNull() bool
-	IsUnknown() bool
-}](v T) bool {
-	return !v.IsNull() && !v.IsUnknown()
-}
-
-func strPtr(v types.String) *string {
-	if !known(v) {
-		return nil
-	}
-	s := v.ValueString()
-	return &s
-}
-
-func int64Ptr(v types.Int64) *int64 {
-	if !known(v) {
-		return nil
-	}
-	i := v.ValueInt64()
-	return &i
-}
-
-func boolPtr(v types.Bool) *bool {
-	if !known(v) {
-		return nil
-	}
-	b := v.ValueBool()
-	return &b
-}
-
-func setToInt64s(ctx context.Context, s types.Set) ([]int64, diag.Diagnostics) {
-	out := []int64{}
-	if !known(s) {
-		return out, nil
-	}
-	d := s.ElementsAs(ctx, &out, false)
-	return out, d
-}
-
-func setToStrings(ctx context.Context, s types.Set) ([]string, diag.Diagnostics) {
-	out := []string{}
-	if !known(s) {
-		return out, nil
-	}
-	d := s.ElementsAs(ctx, &out, false)
-	return out, d
-}
-
-func nullableString(p *string) types.String {
-	if p == nil {
-		return types.StringNull()
-	}
-	return types.StringValue(*p)
-}
-
 // refresh copies the API representation, plus the separately-listed sites,
 // roles, users and clients, into the model.
 func (r *privateResourceResource) refresh(ctx context.Context, m *privateResourceModel, sr *client.SiteResource) diag.Diagnostics {
@@ -298,10 +226,7 @@ func (r *privateResourceResource) refresh(ctx context.Context, m *privateResourc
 	m.Name = types.StringValue(sr.Name)
 	m.Mode = types.StringValue(sr.Mode)
 	m.Destination = nullableString(sr.Destination)
-	m.DestinationPort = types.Int64Null()
-	if sr.DestinationPort != nil {
-		m.DestinationPort = types.Int64Value(*sr.DestinationPort)
-	}
+	m.DestinationPort = nullableInt64(sr.DestinationPort)
 	m.Scheme = nullableString(sr.Scheme)
 	m.SSL = types.BoolValue(sr.SSL)
 	m.Enabled = types.BoolValue(sr.Enabled)
@@ -313,10 +238,7 @@ func (r *privateResourceResource) refresh(ctx context.Context, m *privateResourc
 	m.DomainID = nullableString(sr.DomainID)
 	m.Subdomain = nullableString(sr.Subdomain)
 	m.FullDomain = nullableString(sr.FullDomain)
-	m.AuthDaemonPort = types.Int64Null()
-	if sr.AuthDaemonPort != nil {
-		m.AuthDaemonPort = types.Int64Value(*sr.AuthDaemonPort)
-	}
+	m.AuthDaemonPort = nullableInt64(sr.AuthDaemonPort)
 	m.AuthDaemonMode = nullableString(sr.AuthDaemonMode)
 	m.PamMode = nullableString(sr.PamMode)
 
@@ -512,23 +434,11 @@ func (r *privateResourceResource) Delete(ctx context.Context, req resource.Delet
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	err := r.client.DeleteSiteResource(ctx, state.PrivateResourceID.ValueInt64())
-	if err != nil && !client.IsNotFound(err) {
+	if err := client.IgnoreNotFound(r.client.DeleteSiteResource(ctx, state.PrivateResourceID.ValueInt64())); err != nil {
 		resp.Diagnostics.AddError("Error deleting site resource", err.Error())
 	}
 }
 
 func (r *privateResourceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<private_resource_id>, e.g. "acme:12"`)
-		return
-	}
-	id, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Import ID", "private_resource_id must be a numeric ID: "+err.Error())
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("private_resource_id"), id)...)
+	importStringAndInt64(ctx, req.ID, resp, "org_id", "private_resource_id")
 }

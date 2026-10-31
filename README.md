@@ -29,15 +29,16 @@ The [provider documentation](./docs/index.md) walks through publishing a first s
 |---|---|
 | Organization | `pangolin_organization`, `pangolin_domain` |
 | Connectivity | `pangolin_site` |
-| Public resources | `pangolin_resource`, `pangolin_target`, `pangolin_resource_rule` |
+| Public resources | `pangolin_resource`, `pangolin_target`, `pangolin_resource_rule`, `pangolin_resource_mtls`, `pangolin_redirect` |
 | Private resources | `pangolin_private_resource` |
-| Access | `pangolin_role`, `pangolin_user`, `pangolin_role_resource_grant`, `pangolin_user_resource_grant` |
+| Access | `pangolin_role`, `pangolin_user`, `pangolin_role_resource_grant`, `pangolin_user_resource_grant`, `pangolin_client_role` |
+| Organizing | `pangolin_label`, `pangolin_label_attachment` |
 | Automation | `pangolin_api_key` |
 | AI gateway | `pangolin_ai_provider` |
 
 Data sources: `pangolin_organization`, `pangolin_domain`, `pangolin_site`, `pangolin_resource`, `pangolin_role`, `pangolin_user`.
 
-Tested against Pangolin 1.24. Per-resource documentation, examples and import formats are in [docs/](./docs/).
+Tested against Pangolin 1.25. Per-resource documentation, examples and import formats are in [docs/](./docs/).
 
 ## Contributing
 
@@ -78,6 +79,10 @@ verify signed releases.
   not the AGPL-licensed community build. Against a plain self-hosted
   community instance it fails with a clear error rather than silently
   succeeding; see the `pangolin_user` resource documentation for details.
+
+- **`pangolin_client_role`** uses routes that only exist in Pangolin Enterprise
+  Edition. Clients themselves aren't managed by this provider, so `client_id`
+  comes from the dashboard or API.
 
 See individual resource documentation in [docs/](./docs/) for other
 mode-specific caveats (e.g. raw tcp/udp resources requiring the

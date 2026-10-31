@@ -41,6 +41,15 @@ func IsNotFound(err error) bool {
 	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound
 }
 
+// IgnoreNotFound returns nil for a 404 and err otherwise, for removals of
+// something that may already be gone.
+func IgnoreNotFound(err error) error {
+	if IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
 // pathEscape escapes a user-supplied ID for safe use as a single URL path
 // segment (e.g. an org, domain, or user ID), preventing it from being
 // misinterpreted as a path separator or query string.

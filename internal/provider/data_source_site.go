@@ -2,13 +2,10 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/RichardBurgoyne/terraform-provider-pangolin/internal/client"
 )
 
 var _ datasource.DataSource = &siteDataSource{}
@@ -16,7 +13,7 @@ var _ datasource.DataSource = &siteDataSource{}
 func NewSiteDataSource() datasource.DataSource { return &siteDataSource{} }
 
 type siteDataSource struct {
-	client *client.Client
+	dataSourceClient
 }
 
 type siteDataSourceModel struct {
@@ -40,18 +37,6 @@ func (d *siteDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 			"type":    schema.StringAttribute{Computed: true},
 		},
 	}
-}
-
-func (d *siteDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Data Source Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	d.client = c
 }
 
 func (d *siteDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

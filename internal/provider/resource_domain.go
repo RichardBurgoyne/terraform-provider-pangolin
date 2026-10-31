@@ -2,10 +2,7 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -23,7 +20,7 @@ var (
 func NewDomainResource() resource.Resource { return &domainResource{} }
 
 type domainResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type domainResourceModel struct {
@@ -82,18 +79,6 @@ func (r *domainResource) Schema(ctx context.Context, req resource.SchemaRequest,
 	}
 }
 
-func (r *domainResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
-}
-
 func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan domainResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -108,10 +93,7 @@ func (r *domainResource) Create(ctx context.Context, req resource.CreateRequest,
 	if !plan.CertResolver.IsUnknown() {
 		createIn.CertResolver = plan.CertResolver.ValueString()
 	}
-	if !plan.PreferWildcardCert.IsUnknown() && !plan.PreferWildcardCert.IsNull() {
-		v := plan.PreferWildcardCert.ValueBool()
-		createIn.PreferWildcardCert = &v
-	}
+	createIn.PreferWildcardCert = boolPtr(plan.PreferWildcardCert)
 
 	created, err := r.client.CreateDomain(ctx, plan.OrgID.ValueString(), createIn)
 	if err != nil {
@@ -183,10 +165,7 @@ func (r *domainResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	updateIn := client.UpdateDomainRequest{CertResolver: plan.CertResolver.ValueString()}
-	if !plan.PreferWildcardCert.IsNull() {
-		v := plan.PreferWildcardCert.ValueBool()
-		updateIn.PreferWildcardCert = &v
-	}
+	updateIn.PreferWildcardCert = boolPtr(plan.PreferWildcardCert)
 
 	// domain_id is Computed-only (never Optional), so its planned value goes
 	// Unknown whenever any other attribute changes unless read from state,
@@ -212,23 +191,11 @@ func (r *domainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.client.DeleteDomain(ctx, state.OrgID.ValueString(), state.DomainID.ValueString()); err != nil {
+	if err := client.IgnoreNotFound(r.client.DeleteDomain(ctx, state.OrgID.ValueString(), state.DomainID.ValueString())); err != nil {
 		resp.Diagnostics.AddError("Error deleting domain", err.Error())
 	}
 }
 
 func (r *domainResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<domain_id>, e.g. "acme:d1"`)
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("domain_id"), parts[1])...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	importStringPair(ctx, req.ID, resp, "org_id", "domain_id")
 }

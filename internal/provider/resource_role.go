@@ -2,14 +2,11 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -25,7 +22,7 @@ var (
 func NewRoleResource() resource.Resource { return &roleResource{} }
 
 type roleResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type roleResourceModel struct {
@@ -50,7 +47,7 @@ func (r *roleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 		Description: "Manages a Pangolin role. ssh_sudo_commands, ssh_create_home_dir, and ssh_unix_groups require a Pangolin subscription or license that includes role-based SSH controls; on an unlicensed org the server silently ignores them, which shows up as a persistent plan diff rather than an error. Import using the format `<org_id>:<role_id>`, e.g. `terraform import pangolin_role.example acme:5`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":                  schema.StringAttribute{Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}, Description: "Organization ID this role belongs to."},
-			"role_id":                 schema.Int64Attribute{Computed: true, Description: "Server-generated role ID."},
+			"role_id":                 schema.Int64Attribute{Computed: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}, Description: "Server-generated role ID."},
 			"name":                    schema.StringAttribute{Required: true, Description: "Role name, unique per org."},
 			"description":             schema.StringAttribute{Optional: true, Computed: true, Description: "Role description."},
 			"require_device_approval": schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether devices used by members of this role require approval."},
@@ -77,18 +74,6 @@ func (r *roleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 	}
 }
 
-func (r *roleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
-}
-
 func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan roleResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -100,21 +85,12 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if !plan.Description.IsUnknown() {
 		in.Description = plan.Description.ValueString()
 	}
-	if !plan.RequireDeviceApproval.IsUnknown() {
-		v := plan.RequireDeviceApproval.ValueBool()
-		in.RequireDeviceApproval = &v
-	}
-	if !plan.AllowSSH.IsUnknown() {
-		v := plan.AllowSSH.ValueBool()
-		in.AllowSSH = &v
-	}
+	in.RequireDeviceApproval = boolPtr(plan.RequireDeviceApproval)
+	in.AllowSSH = boolPtr(plan.AllowSSH)
 	if !plan.SSHSudoMode.IsUnknown() {
 		in.SSHSudoMode = plan.SSHSudoMode.ValueString()
 	}
-	if !plan.SSHCreateHomeDir.IsUnknown() {
-		v := plan.SSHCreateHomeDir.ValueBool()
-		in.SSHCreateHomeDir = &v
-	}
+	in.SSHCreateHomeDir = boolPtr(plan.SSHCreateHomeDir)
 	if !plan.SSHSudoCommands.IsUnknown() {
 		resp.Diagnostics.Append(plan.SSHSudoCommands.ElementsAs(ctx, &in.SSHSudoCommands, false)...)
 	}
@@ -173,26 +149,11 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	in := client.UpdateRoleRequest{}
 	name := plan.Name.ValueString()
 	in.Name = &name
-	if !plan.Description.IsUnknown() {
-		v := plan.Description.ValueString()
-		in.Description = &v
-	}
-	if !plan.RequireDeviceApproval.IsUnknown() {
-		v := plan.RequireDeviceApproval.ValueBool()
-		in.RequireDeviceApproval = &v
-	}
-	if !plan.AllowSSH.IsUnknown() {
-		v := plan.AllowSSH.ValueBool()
-		in.AllowSSH = &v
-	}
-	if !plan.SSHSudoMode.IsUnknown() {
-		v := plan.SSHSudoMode.ValueString()
-		in.SSHSudoMode = &v
-	}
-	if !plan.SSHCreateHomeDir.IsUnknown() {
-		v := plan.SSHCreateHomeDir.ValueBool()
-		in.SSHCreateHomeDir = &v
-	}
+	in.Description = strPtr(plan.Description)
+	in.RequireDeviceApproval = boolPtr(plan.RequireDeviceApproval)
+	in.AllowSSH = boolPtr(plan.AllowSSH)
+	in.SSHSudoMode = strPtr(plan.SSHSudoMode)
+	in.SSHCreateHomeDir = boolPtr(plan.SSHCreateHomeDir)
 	if !plan.SSHSudoCommands.IsUnknown() {
 		resp.Diagnostics.Append(plan.SSHSudoCommands.ElementsAs(ctx, &in.SSHSudoCommands, false)...)
 	}
@@ -227,30 +188,13 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.client.DeleteRole(ctx, state.RoleID.ValueInt64()); err != nil {
+	if err := client.IgnoreNotFound(r.client.DeleteRole(ctx, state.RoleID.ValueInt64())); err != nil {
 		resp.Diagnostics.AddError("Error deleting role", err.Error())
 	}
 }
 
 func (r *roleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<role_id>, e.g. "acme:5"`)
-		return
-	}
-	id, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Import ID", "role_id must be a numeric ID: "+err.Error())
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_id"), id)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	importStringAndInt64(ctx, req.ID, resp, "org_id", "role_id")
 }
 
 // decodeSSHStringListAttr decodes a Role.SSHSudoCommands/SSHUnixGroups value

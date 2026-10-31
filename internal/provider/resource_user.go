@@ -20,7 +20,7 @@ var _ resource.Resource = &userResource{}
 func NewUserResource() resource.Resource { return &userResource{} }
 
 type userResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type userResourceModel struct {
@@ -53,18 +53,6 @@ func (r *userResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"auto_provisioned": schema.BoolAttribute{Optional: true, Computed: true, PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()}, Description: "Whether this user was auto-provisioned."},
 		},
 	}
-}
-
-func (r *userResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
 }
 
 func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -215,7 +203,7 @@ func (r *userResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.client.DeleteOrgUser(ctx, state.OrgID.ValueString(), state.UserID.ValueString()); err != nil {
+	if err := client.IgnoreNotFound(r.client.DeleteOrgUser(ctx, state.OrgID.ValueString(), state.UserID.ValueString())); err != nil {
 		resp.Diagnostics.AddError("Error deleting user", err.Error())
 	}
 }

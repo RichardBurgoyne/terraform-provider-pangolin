@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -22,7 +21,7 @@ var (
 func NewOrganizationResource() resource.Resource { return &organizationResource{} }
 
 type organizationResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type organizationResourceModel struct {
@@ -63,18 +62,6 @@ func (r *organizationResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 		},
 	}
-}
-
-func (r *organizationResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
 }
 
 func (r *organizationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -139,7 +126,7 @@ func (r *organizationResource) Delete(ctx context.Context, req resource.DeleteRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.client.DeleteOrganization(ctx, state.OrgID.ValueString()); err != nil {
+	if err := client.IgnoreNotFound(r.client.DeleteOrganization(ctx, state.OrgID.ValueString())); err != nil {
 		resp.Diagnostics.AddError("Error deleting organization", err.Error())
 	}
 }
