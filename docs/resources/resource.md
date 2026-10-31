@@ -20,6 +20,9 @@ resource "pangolin_resource" "example" {
   domain_id = pangolin_domain.example.domain_id
   subdomain = "app"
 
+  # Distribute requests by client IP hash (Pangolin 1.25+, Traefik 3.6+).
+  load_balancing_strategy = "hrw"
+
   # Evaluate pangolin_resource_rule rules for this resource.
   apply_rules = true
 
@@ -54,7 +57,9 @@ resource "pangolin_resource" "example" {
 - `domain_id` (String) Domain ID this resource is served from. Required for every mode except tcp/udp, and must be omitted for tcp/udp.
 - `email_whitelist_enabled` (Boolean) Whether access is restricted to whitelisted emails. Update-only (see sso). Not valid for tcp/udp resources.
 - `enabled` (Boolean) Whether the resource is enabled.
+- `forward_identity_headers` (Boolean) Whether to send the authenticated user's identity to the backend in the Remote-User, Remote-Email, Remote-Name, Remote-Role and Remote-User-Id headers. Requires Pangolin 1.25 or later. Update-only: not settable at creation. Not valid for tcp/udp resources.
 - `headers_json` (String) Extra headers sent to the target, as a JSON array of {name, value} objects, e.g. `[{"name":"X-Foo","value":"bar"}]`. Modeled as a JSON string rather than a nested list because the Pangolin API itself is inconsistent about this field's wire format across endpoints (same reasoning as pangolin_target's hc_headers_json). Update-only: not settable at creation. Not valid for tcp/udp resources.
+- `load_balancing_strategy` (String) How requests are distributed across targets: wrr (weighted round robin, the server default), p2c (power of two choices), hrw (highest random weight, hashing the client IP) or leasttime (lowest response time). Requires Pangolin 1.25 or later and Traefik 3.6 or later. Update-only: not settable at creation. Not valid for tcp/udp resources.
 - `pam_mode` (String) SSH PAM mode: passthrough or push. Only meaningful for mode = ssh.
 - `post_auth_path` (String) Path to redirect to after authentication. Not valid for tcp/udp resources.
 - `proxy_port` (Number) Public port for a raw tcp/udp resource. Required when mode is tcp or udp; must be omitted otherwise.

@@ -3,12 +3,12 @@
 page_title: "pangolin_site Resource - pangolin"
 subcategory: ""
 description: |-
-  Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, and auto_update_override_org can be updated after creation; every other attribute replaces the site if changed. Import using the format <org_id>:<site_id>, e.g. terraform import pangolin_site.example acme:5.
+  Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, auto_update_override_org and rotation_trigger can be updated after creation; every other attribute replaces the site if changed. Import using the format <org_id>:<site_id>, e.g. terraform import pangolin_site.example acme:5.
 ---
 
 # pangolin_site (Resource)
 
-Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, and auto_update_override_org can be updated after creation; every other attribute replaces the site if changed. Import using the format `<org_id>:<site_id>`, e.g. `terraform import pangolin_site.example acme:5`.
+Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, auto_update_override_org and rotation_trigger can be updated after creation; every other attribute replaces the site if changed. Import using the format `<org_id>:<site_id>`, e.g. `terraform import pangolin_site.example acme:5`.
 
 ## Example Usage
 
@@ -17,6 +17,9 @@ resource "pangolin_site" "example" {
   org_id = pangolin_organization.example.org_id
   name   = "example-site"
   type   = "newt"
+
+  # Change this value to rotate the Newt secret (Pangolin 1.25+).
+  rotation_trigger = "2026-11"
 }
 
 output "example_site_newt_credentials" {
@@ -43,12 +46,13 @@ output "example_site_newt_credentials" {
 - `exit_node_id` (Number) Exit node ID. Required for type = wireguard; server-assigned for type = newt.
 - `nice_id` (String) Human-readable ID, unique per org. Server-generated if omitted.
 - `pub_key` (String) WireGuard public key. Required for type = wireguard.
+- `rotation_trigger` (String) Set or change this to any value to replace the Newt secret. Pangolin disconnects the running agent, which then needs the new `secret` to reconnect. Removing the value does nothing. Only valid for type = newt. Requires Pangolin 1.25 or later.
 - `subnet` (String) WireGuard tunnel subnet. Required for type = wireguard.
 
 ### Read-Only
 
 - `newt_id` (String, Sensitive) Newt agent ID (type = newt only). Only ever populated from the create response.
-- `secret` (String, Sensitive) Newt agent secret (type = newt only). Only ever populated from the create response.
+- `secret` (String, Sensitive) Newt agent secret (type = newt only). Only ever populated from the create response and by rotation_trigger.
 - `site_id` (Number) Server-generated site ID.
 
 ## Import
