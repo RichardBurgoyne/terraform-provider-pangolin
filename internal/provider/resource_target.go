@@ -70,7 +70,7 @@ func (r *targetResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		Description: "Manages a backend target on a Pangolin resource, including its health check configuration. Import using the format `<resource_id>:<target_id>`, e.g. `terraform import pangolin_target.example 5:9`.",
 		Attributes: map[string]schema.Attribute{
 			"resource_id":       schema.Int64Attribute{Required: true, PlanModifiers: replaceInt, Description: "Resource ID this target belongs to."},
-			"target_id":         schema.Int64Attribute{Computed: true, Description: "Server-generated target ID."},
+			"target_id":         schema.Int64Attribute{Computed: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}, Description: "Server-generated target ID."},
 			"site_id":           schema.Int64Attribute{Required: true, Description: "Site ID this target routes through."},
 			"ip":                schema.StringAttribute{Required: true, Description: "Target IP address or hostname."},
 			"mode":              schema.StringAttribute{Optional: true, Computed: true, Description: "One of http, tcp, udp, ssh, rdp, vnc. Defaults to the resource's mode."},

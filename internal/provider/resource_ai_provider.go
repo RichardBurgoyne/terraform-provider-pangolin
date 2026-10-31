@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -67,7 +68,7 @@ func (r *aiProviderResource) Schema(ctx context.Context, req resource.SchemaRequ
 		Description: "Manages an AI provider (an upstream AI gateway backend) in Pangolin. Attach an existing provider to an inference-mode pangolin_resource via that resource's ai_providers attribute. Import using the numeric provider ID, e.g. `terraform import pangolin_ai_provider.example 5`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":      schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this provider belongs to."},
-			"provider_id": schema.Int64Attribute{Computed: true, Description: "Server-generated provider ID."},
+			"provider_id": schema.Int64Attribute{Computed: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}, Description: "Server-generated provider ID."},
 			"nice_id":     schema.StringAttribute{Computed: true, Description: "Human-readable ID, unique per org."},
 			"name":        schema.StringAttribute{Required: true, Description: "Display name of the provider."},
 			"type": schema.StringAttribute{
