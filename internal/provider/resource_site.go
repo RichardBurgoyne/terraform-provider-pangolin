@@ -2,9 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -25,7 +22,7 @@ var (
 func NewSiteResource() resource.Resource { return &siteResource{} }
 
 type siteResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type siteResourceModel struct {
@@ -76,18 +73,6 @@ func (r *siteResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 	}
 }
 
-func (r *siteResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
-}
-
 func (r *siteResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config siteResourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
@@ -125,10 +110,7 @@ func (r *siteResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Name: plan.Name.ValueString(),
 		Type: plan.Type.ValueString(),
 	}
-	if !plan.ExitNodeID.IsNull() && !plan.ExitNodeID.IsUnknown() {
-		v := plan.ExitNodeID.ValueInt64()
-		in.ExitNodeID = &v
-	}
+	in.ExitNodeID = int64Ptr(plan.ExitNodeID)
 	if !plan.NiceID.IsUnknown() {
 		in.NiceID = plan.NiceID.ValueString()
 	}
@@ -184,18 +166,9 @@ func (r *siteResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	in := client.UpdateSiteRequest{}
 	name := plan.Name.ValueString()
 	in.Name = &name
-	if !plan.DockerSocketEnabled.IsUnknown() {
-		v := plan.DockerSocketEnabled.ValueBool()
-		in.DockerSocketEnabled = &v
-	}
-	if !plan.AutoUpdateEnabled.IsUnknown() {
-		v := plan.AutoUpdateEnabled.ValueBool()
-		in.AutoUpdateEnabled = &v
-	}
-	if !plan.AutoUpdateOverrideOrg.IsUnknown() {
-		v := plan.AutoUpdateOverrideOrg.ValueBool()
-		in.AutoUpdateOverrideOrg = &v
-	}
+	in.DockerSocketEnabled = boolPtr(plan.DockerSocketEnabled)
+	in.AutoUpdateEnabled = boolPtr(plan.AutoUpdateEnabled)
+	in.AutoUpdateOverrideOrg = boolPtr(plan.AutoUpdateOverrideOrg)
 
 	site, err := r.client.UpdateSite(ctx, state.SiteID.ValueInt64(), in)
 	if err != nil {
@@ -215,30 +188,13 @@ func (r *siteResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.client.DeleteSite(ctx, state.SiteID.ValueInt64()); err != nil {
+	if err := client.IgnoreNotFound(r.client.DeleteSite(ctx, state.SiteID.ValueInt64())); err != nil {
 		resp.Diagnostics.AddError("Error deleting site", err.Error())
 	}
 }
 
 func (r *siteResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <org_id>:<site_id>, e.g. "acme:5"`)
-		return
-	}
-	id, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Import ID", "site_id must be a numeric ID: "+err.Error())
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("org_id"), parts[0])...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("site_id"), id)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	importStringAndInt64(ctx, req.ID, resp, "org_id", "site_id")
 }
 
 func setSiteModelFromAPI(model *siteResourceModel, site *client.Site) {
@@ -246,25 +202,13 @@ func setSiteModelFromAPI(model *siteResourceModel, site *client.Site) {
 	model.NiceID = types.StringValue(site.NiceID)
 	model.Name = types.StringValue(site.Name)
 	model.Type = types.StringValue(site.Type)
-	if site.ExitNodeID != nil {
-		model.ExitNodeID = types.Int64Value(*site.ExitNodeID)
-	} else {
-		model.ExitNodeID = types.Int64Null()
-	}
+	model.ExitNodeID = nullableInt64(site.ExitNodeID)
 	model.PubKey = types.StringValue(site.PubKey)
 	model.Subnet = types.StringValue(site.Subnet)
 	model.Address = types.StringValue(site.Address)
 	model.DockerSocketEnabled = types.BoolValue(site.DockerSocketEnabled)
 	model.AutoUpdateEnabled = types.BoolValue(site.AutoUpdateEnabled)
 	model.AutoUpdateOverrideOrg = types.BoolValue(site.AutoUpdateOverrideOrg)
-	if site.NewtID != "" {
-		model.NewtID = types.StringValue(site.NewtID)
-	} else {
-		model.NewtID = types.StringNull()
-	}
-	if site.Secret != "" {
-		model.Secret = types.StringValue(site.Secret)
-	} else {
-		model.Secret = types.StringNull()
-	}
+	model.NewtID = nonEmptyString(site.NewtID)
+	model.Secret = nonEmptyString(site.Secret)
 }

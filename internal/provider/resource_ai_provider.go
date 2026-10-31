@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -25,7 +24,7 @@ var (
 func NewAIProviderResource() resource.Resource { return &aiProviderResource{} }
 
 type aiProviderResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type aiProviderHeaderModel struct {
@@ -119,18 +118,6 @@ func (r *aiProviderResource) Schema(ctx context.Context, req resource.SchemaRequ
 	}
 }
 
-func (r *aiProviderResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
-}
-
 func aiProviderHeadersFromPlan(ctx context.Context, list types.List) ([]client.HCHeader, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if list.IsNull() || list.IsUnknown() {
@@ -171,14 +158,8 @@ func (r *aiProviderResource) Create(ctx context.Context, req resource.CreateRequ
 		Name: plan.Name.ValueString(),
 		Type: plan.Type.ValueString(),
 	}
-	if !plan.UpstreamURL.IsUnknown() && !plan.UpstreamURL.IsNull() {
-		v := plan.UpstreamURL.ValueString()
-		in.UpstreamURL = &v
-	}
-	if !plan.APIKey.IsUnknown() && !plan.APIKey.IsNull() {
-		v := plan.APIKey.ValueString()
-		in.APIKey = &v
-	}
+	in.UpstreamURL = strPtr(plan.UpstreamURL)
+	in.APIKey = strPtr(plan.APIKey)
 	if !plan.AuthType.IsUnknown() {
 		in.AuthType = plan.AuthType.ValueString()
 	}
@@ -197,14 +178,8 @@ func (r *aiProviderResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 	in.Headers = headers
-	if !plan.SkipTLSVerification.IsUnknown() && !plan.SkipTLSVerification.IsNull() {
-		v := plan.SkipTLSVerification.ValueBool()
-		in.SkipTLSVerification = &v
-	}
-	if !plan.Enabled.IsUnknown() && !plan.Enabled.IsNull() {
-		v := plan.Enabled.ValueBool()
-		in.Enabled = &v
-	}
+	in.SkipTLSVerification = boolPtr(plan.SkipTLSVerification)
+	in.Enabled = boolPtr(plan.Enabled)
 
 	created, err := r.client.CreateAIProvider(ctx, plan.OrgID.ValueString(), in)
 	if err != nil {
@@ -254,14 +229,8 @@ func (r *aiProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 	in := client.UpdateAIProviderRequest{}
 	name := plan.Name.ValueString()
 	in.Name = &name
-	if !plan.UpstreamURL.IsUnknown() {
-		v := plan.UpstreamURL.ValueString()
-		in.UpstreamURL = &v
-	}
-	if !plan.APIKey.IsUnknown() && !plan.APIKey.IsNull() {
-		v := plan.APIKey.ValueString()
-		in.APIKey = &v
-	}
+	in.UpstreamURL = strPtr(plan.UpstreamURL)
+	in.APIKey = strPtr(plan.APIKey)
 	if !plan.AuthType.IsUnknown() {
 		in.AuthType = plan.AuthType.ValueString()
 	}
@@ -282,14 +251,8 @@ func (r *aiProviderResource) Update(ctx context.Context, req resource.UpdateRequ
 		}
 		in.Headers = headers
 	}
-	if !plan.SkipTLSVerification.IsUnknown() {
-		v := plan.SkipTLSVerification.ValueBool()
-		in.SkipTLSVerification = &v
-	}
-	if !plan.Enabled.IsUnknown() {
-		v := plan.Enabled.ValueBool()
-		in.Enabled = &v
-	}
+	in.SkipTLSVerification = boolPtr(plan.SkipTLSVerification)
+	in.Enabled = boolPtr(plan.Enabled)
 
 	updated, err := r.client.UpdateAIProvider(ctx, state.ProviderID.ValueInt64(), in)
 	if err != nil {
@@ -310,7 +273,7 @@ func (r *aiProviderResource) Delete(ctx context.Context, req resource.DeleteRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.client.DeleteAIProvider(ctx, state.ProviderID.ValueInt64()); err != nil {
+	if err := client.IgnoreNotFound(r.client.DeleteAIProvider(ctx, state.ProviderID.ValueInt64())); err != nil {
 		resp.Diagnostics.AddError("Error deleting AI provider", err.Error())
 	}
 }

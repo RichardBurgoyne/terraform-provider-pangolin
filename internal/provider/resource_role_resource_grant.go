@@ -2,11 +2,7 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
@@ -24,7 +20,7 @@ var (
 func NewRoleResourceGrantResource() resource.Resource { return &roleResourceGrantResource{} }
 
 type roleResourceGrantResource struct {
-	client *client.Client
+	resourceClient
 }
 
 type roleResourceGrantModel struct {
@@ -45,18 +41,6 @@ func (r *roleResourceGrantResource) Schema(ctx context.Context, req resource.Sch
 			"role_id":     schema.Int64Attribute{Required: true, PlanModifiers: replace, Description: "Role ID being granted access."},
 		},
 	}
-}
-
-func (r *roleResourceGrantResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-	c, ok := req.ProviderData.(*client.Client)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *client.Client, got: %T", req.ProviderData))
-		return
-	}
-	r.client = c
 }
 
 func (r *roleResourceGrantResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -112,26 +96,7 @@ func (r *roleResourceGrantResource) Update(ctx context.Context, req resource.Upd
 }
 
 func (r *roleResourceGrantResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, ":", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		resp.Diagnostics.AddError("Invalid Import ID", `expected format: <resource_id>:<role_id>, e.g. "5:2"`)
-		return
-	}
-	resourceID, err := strconv.ParseInt(parts[0], 10, 64)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Import ID", "resource_id must be a numeric ID: "+err.Error())
-		return
-	}
-	roleID, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid Import ID", "role_id must be a numeric ID: "+err.Error())
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("resource_id"), resourceID)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_id"), roleID)...)
+	importInt64Pair(ctx, req.ID, resp, "resource_id", "role_id")
 }
 
 func (r *roleResourceGrantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -140,7 +105,7 @@ func (r *roleResourceGrantResource) Delete(ctx context.Context, req resource.Del
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if err := r.client.RemoveRoleFromResource(ctx, state.ResourceID.ValueInt64(), state.RoleID.ValueInt64()); err != nil {
+	if err := client.IgnoreNotFound(r.client.RemoveRoleFromResource(ctx, state.ResourceID.ValueInt64(), state.RoleID.ValueInt64())); err != nil {
 		resp.Diagnostics.AddError("Error revoking role access from resource", err.Error())
 	}
 }
