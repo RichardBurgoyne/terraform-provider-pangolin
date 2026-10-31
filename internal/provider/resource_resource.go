@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/RichardBurgoyne/terraform-provider-pangolin/internal/client"
@@ -83,6 +86,10 @@ type pangolinResourceModel struct {
 	SetHostHeader         types.String `tfsdk:"set_host_header"`
 	HeadersJSON           types.String `tfsdk:"headers_json"`
 	ResponseHeadersJSON   types.String `tfsdk:"response_headers_json"`
+
+	// Update-only http-family fields added in Pangolin 1.25.
+	LoadBalancingStrategy  types.String `tfsdk:"load_balancing_strategy"`
+	ForwardIdentityHeaders types.Bool   `tfsdk:"forward_identity_headers"`
 }
 
 func (r *pangolinResourceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -95,13 +102,14 @@ func (r *pangolinResourceResource) Schema(ctx context.Context, req resource.Sche
 		Description: "Manages a Pangolin resource (a proxied endpoint). mode and domain_id changes replace the resource. Import using the format `<org_id>:<resource_id>`, e.g. `terraform import pangolin_resource.example acme:5`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":      schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this resource belongs to."},
-			"resource_id": schema.Int64Attribute{Computed: true, Description: "Server-generated resource ID."},
-			"nice_id":     schema.StringAttribute{Computed: true, Description: "Human-readable ID, unique per org."},
+			"resource_id": schema.Int64Attribute{Computed: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}, Description: "Server-generated resource ID."},
+			"nice_id":     schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}, Description: "Human-readable ID, unique per org."},
 			"name":        schema.StringAttribute{Required: true, Description: "Display name of the resource."},
 			"mode": schema.StringAttribute{
 				Required:      true,
 				PlanModifiers: replace,
 				Description:   "One of http, ssh, rdp, vnc, inference, tcp, udp. tcp and udp are raw (non-HTTP) resources: they require proxy_port, must not set domain_id/subdomain, and require the allow_raw_resources flag to be enabled in the Pangolin server config. inference is an AI gateway resource: it is domain-routed like http but may attach existing AI providers via ai_providers.",
+				Validators:    []validator.String{stringvalidator.OneOf("http", "ssh", "rdp", "vnc", "inference", "tcp", "udp")},
 			},
 			"domain_id": schema.StringAttribute{
 				Optional:    true,
@@ -111,8 +119,8 @@ func (r *pangolinResourceResource) Schema(ctx context.Context, req resource.Sche
 			"full_domain":      schema.StringAttribute{Computed: true, Description: "Fully-qualified domain this resource is reachable at. Empty for tcp/udp resources."},
 			"sticky_session":   schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether to enable sticky sessions."},
 			"post_auth_path":   schema.StringAttribute{Optional: true, Computed: true, Description: "Path to redirect to after authentication. Not valid for tcp/udp resources."},
-			"pam_mode":         schema.StringAttribute{Optional: true, Computed: true, Description: "SSH PAM mode: passthrough or push. Only meaningful for mode = ssh."},
-			"auth_daemon_mode": schema.StringAttribute{Optional: true, Computed: true, Description: "One of site, remote, native. Only meaningful for mode = ssh."},
+			"pam_mode":         schema.StringAttribute{Optional: true, Computed: true, Description: "SSH PAM mode: passthrough or push. Only meaningful for mode = ssh.", Validators: []validator.String{stringvalidator.OneOf("passthrough", "push")}},
+			"auth_daemon_mode": schema.StringAttribute{Optional: true, Computed: true, Description: "One of site, remote, native. Only meaningful for mode = ssh.", Validators: []validator.String{stringvalidator.OneOf("site", "remote", "native")}},
 			"auth_daemon_port": schema.Int64Attribute{Optional: true, Description: "Auth daemon port. Only meaningful for mode = ssh."},
 			"enabled":          schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether the resource is enabled."},
 			"ssl":              schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether SSL is enabled. Update-only: not settable at creation, so a newly created resource keeps the server's default (true) until first set. Not valid for tcp/udp resources."},
@@ -173,6 +181,18 @@ func (r *pangolinResourceResource) Schema(ctx context.Context, req resource.Sche
 				Description: "Extra headers added to responses sent back to the client, as a JSON array of {name, value} objects, e.g. `[{\"name\":\"X-Frame-Options\",\"value\":\"DENY\"}]`. Requires Pangolin 1.24 or later. Update-only: not settable at creation. Not valid for tcp/udp resources.",
 			},
 
+			"load_balancing_strategy": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "How requests are distributed across targets: wrr (weighted round robin, the server default), p2c (power of two choices), hrw (highest random weight, hashing the client IP) or leasttime (lowest response time). Requires Pangolin 1.25 or later and Traefik 3.6 or later. Update-only: not settable at creation. Not valid for tcp/udp resources.",
+				Validators:  []validator.String{stringvalidator.OneOf("wrr", "p2c", "hrw", "leasttime")},
+			},
+			"forward_identity_headers": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Whether to send the authenticated user's identity to the backend in the Remote-User, Remote-Email, Remote-Name, Remote-Role and Remote-User-Id headers. Requires Pangolin 1.25 or later. Update-only: not settable at creation. Not valid for tcp/udp resources.",
+			},
+
 			"ai_providers": schema.ListNestedAttribute{
 				Optional:    true,
 				Description: "AI providers to attach to an inference-mode resource. Providers must already exist in Pangolin (this provider does not manage them). Only valid when mode is inference.",
@@ -231,6 +251,8 @@ func (r *pangolinResourceResource) ValidateConfig(ctx context.Context, req resou
 		{"set_host_header", config.SetHostHeader},
 		{"headers_json", config.HeadersJSON},
 		{"response_headers_json", config.ResponseHeadersJSON},
+		{"load_balancing_strategy", config.LoadBalancingStrategy},
+		{"forward_identity_headers", config.ForwardIdentityHeaders},
 	}
 	rawOnly := []modeScopedAttribute{
 		{"proxy_port", config.ProxyPort},
@@ -351,9 +373,8 @@ func (r *pangolinResourceResource) Create(ctx context.Context, req resource.Crea
 
 	final := created
 	if !isRawMode(mode) {
-		// ssl, sso, email_whitelist_enabled, apply_rules, skip_to_idp_id,
-		// tls_server_name, set_host_header and headers_json aren't part of
-		// the create request (the API doesn't accept them there), and
+		// The attributes set by setUpdateOnlyFields aren't part of the create
+		// request (the API doesn't accept them there), and
 		// CreateResource's response reports their zero value regardless of
 		// the resource's actual (default-policy-derived) state. A follow-up
 		// call is required either way: to apply any of them the plan
@@ -405,6 +426,8 @@ func setUpdateOnlyFields(in *client.UpdateResourceRequest, plan *pangolinResourc
 	in.SkipToIdpID = int64Ptr(plan.SkipToIdpID)
 	in.TLSServerName = strPtr(plan.TLSServerName)
 	in.SetHostHeader = strPtr(plan.SetHostHeader)
+	in.LoadBalancingStrategy = strPtr(plan.LoadBalancingStrategy)
+	in.ForwardIdentityHeaders = boolPtr(plan.ForwardIdentityHeaders)
 	if known(plan.HeadersJSON) {
 		headers, err := parseHeadersJSON(plan.HeadersJSON)
 		if err != nil {
@@ -606,6 +629,8 @@ func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.P
 		model.SetHostHeader = types.StringNull()
 		model.HeadersJSON = types.StringNull()
 		model.ResponseHeadersJSON = types.StringNull()
+		model.LoadBalancingStrategy = types.StringNull()
+		model.ForwardIdentityHeaders = types.BoolNull()
 	} else {
 		model.ProxyPort = types.Int64Null()
 		model.ProxyProtocol = types.BoolNull()
@@ -617,6 +642,8 @@ func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.P
 		model.SkipToIdpID = nonZeroInt64(res.SkipToIdpID)
 		model.TLSServerName = types.StringValue(res.TLSServerName)
 		model.SetHostHeader = types.StringValue(res.SetHostHeader)
+		model.LoadBalancingStrategy = types.StringValue(res.LoadBalancingStrategy)
+		model.ForwardIdentityHeaders = types.BoolValue(res.ForwardIdentityHeaders)
 
 		// Pangolin 1.24 renamed headers to requestHeaders; fall back to the
 		// legacy field for older servers.

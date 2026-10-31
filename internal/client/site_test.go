@@ -71,3 +71,22 @@ func TestDeleteSite(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestRegenerateNewtSecret(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/re-key/4/regenerate-site-secret" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if body["type"] != "newt" || body["secret"] != "s3cret" {
+			t.Errorf("unexpected body: %v", body)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"newtId": "n1"}, "success": true})
+	}))
+	defer server.Close()
+
+	if err := New(server.URL, "token").RegenerateNewtSecret(context.Background(), 4, "s3cret"); err != nil {
+		t.Fatalf("regenerate: %v", err)
+	}
+}

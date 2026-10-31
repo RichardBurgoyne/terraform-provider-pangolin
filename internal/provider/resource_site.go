@@ -2,13 +2,16 @@ package provider
 
 import (
 	"context"
+	"crypto/rand"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/RichardBurgoyne/terraform-provider-pangolin/internal/client"
@@ -41,6 +44,7 @@ type siteResourceModel struct {
 	DockerSocketEnabled   types.Bool   `tfsdk:"docker_socket_enabled"`
 	AutoUpdateEnabled     types.Bool   `tfsdk:"auto_update_enabled"`
 	AutoUpdateOverrideOrg types.Bool   `tfsdk:"auto_update_override_org"`
+	RotationTrigger       types.String `tfsdk:"rotation_trigger"`
 }
 
 func (r *siteResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -53,13 +57,13 @@ func (r *siteResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 	// these server-assigned values unknown, which would force a replacement.
 	keepOrReplace := []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()}
 	resp.Schema = schema.Schema{
-		Description: "Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, and auto_update_override_org can be updated after creation; every other attribute replaces the site if changed. Import using the format `<org_id>:<site_id>`, e.g. `terraform import pangolin_site.example acme:5`.",
+		Description: "Manages a Pangolin site. Only name, docker_socket_enabled, auto_update_enabled, auto_update_override_org and rotation_trigger can be updated after creation; every other attribute replaces the site if changed. Import using the format `<org_id>:<site_id>`, e.g. `terraform import pangolin_site.example acme:5`.",
 		Attributes: map[string]schema.Attribute{
 			"org_id":  schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Organization ID this site belongs to."},
 			"site_id": schema.Int64Attribute{Computed: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}, Description: "Server-generated site ID."},
 			"nice_id": schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: keepOrReplace, Description: "Human-readable ID, unique per org. Server-generated if omitted."},
 			"name":    schema.StringAttribute{Required: true, Description: "Display name of the site."},
-			"type":    schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "One of newt, wireguard, or local."},
+			"type":    schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "One of newt, wireguard, or local.", Validators: []validator.String{stringvalidator.OneOf("newt", "wireguard", "local")}},
 			"exit_node_id": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
@@ -69,10 +73,14 @@ func (r *siteResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"subnet":                   schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: keepOrReplace, Description: "WireGuard tunnel subnet. Required for type = wireguard."},
 			"address":                  schema.StringAttribute{Optional: true, Computed: true, PlanModifiers: keepOrReplace, Description: "Client subnet address. Server-assigned if omitted."},
 			"newt_id":                  schema.StringAttribute{Computed: true, Sensitive: true, Description: "Newt agent ID (type = newt only). Only ever populated from the create response."},
-			"secret":                   schema.StringAttribute{Computed: true, Sensitive: true, Description: "Newt agent secret (type = newt only). Only ever populated from the create response."},
+			"secret":                   schema.StringAttribute{Computed: true, Sensitive: true, Description: "Newt agent secret (type = newt only). Only ever populated from the create response and by rotation_trigger."},
 			"docker_socket_enabled":    schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether the site can access the Docker socket."},
 			"auto_update_enabled":      schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether the site's Newt agent auto-updates."},
 			"auto_update_override_org": schema.BoolAttribute{Optional: true, Computed: true, Description: "Whether this site overrides the org's auto-update setting."},
+			"rotation_trigger": schema.StringAttribute{
+				Optional:    true,
+				Description: "Set or change this to any value to replace the Newt secret. Pangolin disconnects the running agent, which then needs the new `secret` to reconnect. Removing the value does nothing. Only valid for type = newt. Requires Pangolin 1.25 or later.",
+			},
 		},
 	}
 }
@@ -86,6 +94,10 @@ func (r *siteResource) ValidateConfig(ctx context.Context, req resource.Validate
 
 	if config.Type.IsUnknown() || config.Type.IsNull() {
 		return
+	}
+
+	if config.Type.ValueString() != "newt" && !config.RotationTrigger.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("rotation_trigger"), "Invalid rotation_trigger", `rotation_trigger is only valid when type is "newt".`)
 	}
 
 	if config.Type.ValueString() != "wireguard" {
@@ -181,6 +193,15 @@ func (r *siteResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	newtID, secret := state.NewtID, state.Secret
+	if known(plan.RotationTrigger) && !plan.RotationTrigger.Equal(state.RotationTrigger) {
+		newSecret := rand.Text()
+		if err := r.client.RegenerateNewtSecret(ctx, state.SiteID.ValueInt64(), newSecret); err != nil {
+			resp.Diagnostics.AddError("Error rotating site secret", err.Error())
+			return
+		}
+		secret = types.StringValue(newSecret)
+	}
+
 	setSiteModelFromAPI(&plan, site)
 	plan.NewtID, plan.Secret = newtID, secret
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)

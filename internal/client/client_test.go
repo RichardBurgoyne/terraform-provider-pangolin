@@ -64,3 +64,16 @@ func TestDo_ReturnsAPIErrorOnFailure(t *testing.T) {
 		t.Errorf("expected IsNotFound(err) to be true, got false for error: %v", err)
 	}
 }
+
+func TestIgnoreNotFound(t *testing.T) {
+	if err := IgnoreNotFound(&APIError{StatusCode: http.StatusNotFound}); err != nil {
+		t.Errorf("expected a 404 to be ignored, got %v", err)
+	}
+	other := &APIError{StatusCode: http.StatusForbidden}
+	if err := IgnoreNotFound(other); err != other {
+		t.Errorf("expected other errors to pass through, got %v", err)
+	}
+	if err := IgnoreNotFound(nil); err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+}

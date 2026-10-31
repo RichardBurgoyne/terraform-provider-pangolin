@@ -64,6 +64,17 @@ func (c *Client) UpdateSite(ctx context.Context, siteID int64, in UpdateSiteRequ
 	return &out, nil
 }
 
+type regenerateSiteSecretRequest struct {
+	Type   string `json:"type"`
+	Secret string `json:"secret"`
+}
+
+// RegenerateNewtSecret replaces a newt site's secret. Pangolin disconnects the
+// running Newt agent, which must be given the new secret to reconnect.
+func (c *Client) RegenerateNewtSecret(ctx context.Context, siteID int64, secret string) error {
+	return c.do(ctx, http.MethodPost, fmt.Sprintf("/re-key/%d/regenerate-site-secret", siteID), regenerateSiteSecretRequest{Type: "newt", Secret: secret}, nil)
+}
+
 func (c *Client) DeleteSite(ctx context.Context, siteID int64) error {
 	return c.do(ctx, http.MethodDelete, fmt.Sprintf("/site/%d", siteID), nil, nil)
 }

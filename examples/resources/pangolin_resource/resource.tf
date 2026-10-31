@@ -5,6 +5,9 @@ resource "pangolin_resource" "example" {
   domain_id = pangolin_domain.example.domain_id
   subdomain = "app"
 
+  # Distribute requests by client IP hash (Pangolin 1.25+, Traefik 3.6+).
+  load_balancing_strategy = "hrw"
+
   # Evaluate pangolin_resource_rule rules for this resource.
   apply_rules = true
 

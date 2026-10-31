@@ -108,3 +108,12 @@ func TestSetSiteModelFromAPI_WithAgentSetsValues(t *testing.T) {
 		t.Errorf("expected secret %q, got %q", "super-secret", model.Secret.ValueString())
 	}
 }
+
+func TestSiteResource_ValidateConfigRotationTrigger(t *testing.T) {
+	for siteType, wantErr := range map[string]bool{"newt": false, "local": true} {
+		model := siteResourceModel{Type: types.StringValue(siteType), RotationTrigger: types.StringValue("v1")}
+		if diags := validateConfig(t, &siteResource{}, model); diags.HasError() != wantErr {
+			t.Errorf("%s: wantErr %v, got %v", siteType, wantErr, diags)
+		}
+	}
+}

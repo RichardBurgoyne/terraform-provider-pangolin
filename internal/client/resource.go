@@ -41,6 +41,13 @@ type PangolinResource struct {
 	TLSServerName         string `json:"tlsServerName"`
 	SetHostHeader         string `json:"setHostHeader"`
 
+	// The following were added in Pangolin 1.25 and are update-only.
+	// MtlsEnabled is managed by pangolin_resource_mtls, which also owns the CA
+	// certificates it depends on.
+	LoadBalancingStrategy  string `json:"loadBalancingStrategy"`
+	ForwardIdentityHeaders bool   `json:"forwardIdentityHeaders"`
+	MtlsEnabled            bool   `json:"mtlsEnabled"`
+
 	// Headers is a JSON array of {name, value} objects. Like Target.HCHeaders,
 	// the API is inconsistent about its wire format: GET returns a real JSON
 	// array, but the create/update responses return the raw database column,
@@ -111,6 +118,11 @@ type UpdateResourceRequest struct {
 	SkipToIdpID           *int64  `json:"skipToIdpId,omitempty"`
 	TLSServerName         *string `json:"tlsServerName,omitempty"`
 	SetHostHeader         *string `json:"setHostHeader,omitempty"`
+
+	// Pangolin 1.25 and later.
+	LoadBalancingStrategy  *string `json:"loadBalancingStrategy,omitempty"`
+	ForwardIdentityHeaders *bool   `json:"forwardIdentityHeaders,omitempty"`
+	MtlsEnabled            *bool   `json:"mtlsEnabled,omitempty"`
 
 	// RequestHeaders and ResponseHeaders are pointers to slices so that a
 	// non-nil pointer to an empty slice is sent as [] (clearing the headers)
