@@ -3,12 +3,12 @@
 page_title: "pangolin_organization Resource - pangolin"
 subcategory: ""
 description: |-
-  Manages a Pangolin organization. All attributes are immutable after creation (update semantics were not confirmed against source); changing any of them replaces the organization.
+  Manages a Pangolin organization and its settings. Changing org_id, subnet or utility_subnet replaces the organization; the name and settings are updated in place.
 ---
 
 # pangolin_organization (Resource)
 
-Manages a Pangolin organization. All attributes are immutable after creation (update semantics were not confirmed against source); changing any of them replaces the organization.
+Manages a Pangolin organization and its settings. Changing org_id, subnet or utility_subnet replaces the organization; the name and settings are updated in place.
 
 ## Example Usage
 
@@ -18,6 +18,11 @@ resource "pangolin_organization" "example" {
   name           = "Acme Corp"
   subnet         = "10.10.0.0/24"
   utility_subnet = "10.10.1.0/24"
+
+  # Optional settings. Any left out keep their current value in Pangolin.
+  require_two_factor         = true
+  log_retention_days_request = 30
+  log_retention_days_ssh     = 90 # Pangolin 1.26+, Enterprise
 }
 ```
 
@@ -30,6 +35,19 @@ resource "pangolin_organization" "example" {
 - `org_id` (String) Unique organization identifier: lowercase letters, numbers, underscores, and single hyphens only.
 - `subnet` (String) IPv4 CIDR block for this organization's client subnet.
 - `utility_subnet` (String) IPv4 CIDR block for this organization's utility subnet. Must not overlap with subnet.
+
+### Optional
+
+- `log_retention_days_access` (Number) Days to keep access logs. 0 keeps none, -1 keeps them forever, and 9001 keeps them until the end of the following year. Needs an Enterprise license; without one Pangolin ignores it. Left unchanged when omitted.
+- `log_retention_days_action` (Number) Days to keep action logs. 0 keeps none, -1 keeps them forever, and 9001 keeps them until the end of the following year. Needs an Enterprise license; without one Pangolin ignores it. Left unchanged when omitted.
+- `log_retention_days_ai_sessions` (Number) Days to keep AI gateway session logs. 0 keeps none, -1 keeps them forever, and 9001 keeps them until the end of the following year. Needs an Enterprise license; without one Pangolin ignores it. Left unchanged when omitted.
+- `log_retention_days_connection` (Number) Days to keep connection logs. 0 keeps none, -1 keeps them forever, and 9001 keeps them until the end of the following year. Needs an Enterprise license; without one Pangolin ignores it. Left unchanged when omitted.
+- `log_retention_days_request` (Number) Days to keep request logs. 0 keeps none, -1 keeps them forever, and 9001 keeps them until the end of the following year. Left unchanged when omitted.
+- `log_retention_days_ssh` (Number) Days to keep SSH session logs. 0 keeps none, -1 keeps them forever, and 9001 keeps them until the end of the following year. Requires Pangolin 1.26 or later. Needs an Enterprise license; without one Pangolin ignores it. Left unchanged when omitted.
+- `max_session_length_hours` (Number) Longest a member's session may last, in hours. Needs an Enterprise license; without one Pangolin ignores it. Left unchanged when omitted.
+- `newt_auto_update` (Boolean) Let Pangolin update the Newt agent on the organization's sites automatically. Needs an Enterprise license; without one Pangolin ignores it. Left unchanged when omitted.
+- `password_expiry_days` (Number) Days before members must change their password. Needs an Enterprise license; without one Pangolin ignores it. Left unchanged when omitted.
+- `require_two_factor` (Boolean) Require members to use two-factor authentication. Left unchanged when omitted.
 
 ## Import
 

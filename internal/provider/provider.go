@@ -117,6 +117,8 @@ func (p *pangolinProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewLabelResource,
 		NewLabelAttachmentResource,
 		NewClientRoleResource,
+		NewCustomDnsRecordResource,
+		NewIdpOidcResource,
 	}
 }
 

@@ -27,18 +27,18 @@ The [provider documentation](./docs/index.md) walks through publishing a first s
 
 | Area | Resources |
 |---|---|
-| Organization | `pangolin_organization`, `pangolin_domain` |
+| Organization | `pangolin_organization`, `pangolin_domain`, `pangolin_custom_dns_record` |
 | Connectivity | `pangolin_site` |
 | Public resources | `pangolin_resource`, `pangolin_target`, `pangolin_resource_rule`, `pangolin_resource_mtls`, `pangolin_redirect` |
 | Private resources | `pangolin_private_resource` |
-| Access | `pangolin_role`, `pangolin_user`, `pangolin_role_resource_grant`, `pangolin_user_resource_grant`, `pangolin_client_role` |
+| Access | `pangolin_idp_oidc`, `pangolin_role`, `pangolin_user`, `pangolin_role_resource_grant`, `pangolin_user_resource_grant`, `pangolin_client_role` |
 | Organizing | `pangolin_label`, `pangolin_label_attachment` |
 | Automation | `pangolin_api_key` |
 | AI gateway | `pangolin_ai_provider` |
 
 Data sources: `pangolin_organization`, `pangolin_domain`, `pangolin_site`, `pangolin_resource`, `pangolin_role`, `pangolin_user`.
 
-Tested against Pangolin 1.25. Per-resource documentation, examples and import formats are in [docs/](./docs/).
+Tested against Pangolin 1.26. Per-resource documentation, examples and import formats are in [docs/](./docs/).
 
 ## Contributing
 

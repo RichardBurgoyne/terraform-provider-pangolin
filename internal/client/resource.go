@@ -48,6 +48,9 @@ type PangolinResource struct {
 	ForwardIdentityHeaders bool   `json:"forwardIdentityHeaders"`
 	MtlsEnabled            bool   `json:"mtlsEnabled"`
 
+	// Pangolin 1.26 and later; settable at create and update.
+	MatchBaseDomain bool `json:"matchBaseDomain"`
+
 	// Headers is a JSON array of {name, value} objects. Like Target.HCHeaders,
 	// the API is inconsistent about its wire format: GET returns a real JSON
 	// array, but the create/update responses return the raw database column,
@@ -83,6 +86,9 @@ type CreateResourceRequest struct {
 	// an inference-mode resource at creation time. Only valid when
 	// Mode is "inference".
 	AIProviders []ResourceAIProviderAttachment `json:"aiProviders,omitempty"`
+
+	// MatchBaseDomain is Pangolin 1.26 and later, and http mode only.
+	MatchBaseDomain *bool `json:"matchBaseDomain,omitempty"`
 }
 
 type UpdateResourceRequest struct {
@@ -123,6 +129,9 @@ type UpdateResourceRequest struct {
 	LoadBalancingStrategy  *string `json:"loadBalancingStrategy,omitempty"`
 	ForwardIdentityHeaders *bool   `json:"forwardIdentityHeaders,omitempty"`
 	MtlsEnabled            *bool   `json:"mtlsEnabled,omitempty"`
+
+	// Pangolin 1.26 and later, and http mode only.
+	MatchBaseDomain *bool `json:"matchBaseDomain,omitempty"`
 
 	// RequestHeaders and ResponseHeaders are pointers to slices so that a
 	// non-nil pointer to an empty slice is sent as [] (clearing the headers)

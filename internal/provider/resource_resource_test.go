@@ -188,3 +188,27 @@ func TestPangolinResourceResource_ValidateConfig_RawModeRejectsLoadBalancing(t *
 		t.Fatal("expected a validation error when load_balancing_strategy is set on a tcp-mode resource")
 	}
 }
+
+func TestPangolinResourceResource_ValidateConfig_MatchBaseDomain(t *testing.T) {
+	for name, tc := range map[string]struct {
+		mode, subdomain string
+		wantErr         bool
+	}{
+		"http wildcard":     {"http", "*.apps", false},
+		"http not wildcard": {"http", "apps", true},
+		"ssh wildcard":      {"ssh", "*.apps", true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			model := pangolinResourceModel{
+				Mode:            types.StringValue(tc.mode),
+				DomainID:        types.StringValue("d1"),
+				Subdomain:       types.StringValue(tc.subdomain),
+				MatchBaseDomain: types.BoolValue(true),
+				AIProviders:     types.ListNull(aiProviderObjectType()),
+			}
+			if diags := validateConfig(t, &pangolinResourceResource{}, model); diags.HasError() != tc.wantErr {
+				t.Errorf("wantErr %v, got %v", tc.wantErr, diags)
+			}
+		})
+	}
+}

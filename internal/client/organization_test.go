@@ -75,3 +75,26 @@ func TestDeleteOrganization(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestUpdateOrganization_SendsOnlySetFields(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/org/acme" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		// An older server rejects fields it doesn't know, so unset settings
+		// must not be sent at all.
+		if len(body) != 2 || body["name"] != "Acme Ltd" || body["settingsLogRetentionDaysSsh"] != float64(30) {
+			t.Errorf("unexpected body: %v", body)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": nil, "success": true})
+	}))
+	defer server.Close()
+
+	name, days := "Acme Ltd", int64(30)
+	c := New(server.URL, "token")
+	if err := c.UpdateOrganization(context.Background(), "acme", UpdateOrganizationRequest{Name: &name, LogRetentionDaysSSH: &days}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
