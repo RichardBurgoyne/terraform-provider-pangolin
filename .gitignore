@@ -12,3 +12,11 @@ dist/
 docs/superpowers/
 .superpowers/
 .claude/
+CLAUDE.md
+CLAUDE.local.md
+.planning/
+.taskmaster/
+docs/plans/
+task_plan.md
+findings.md
+progress.md
