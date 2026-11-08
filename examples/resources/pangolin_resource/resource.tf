@@ -22,3 +22,14 @@ resource "pangolin_resource" "example" {
     { name = "Referrer-Policy", value = "same-origin" },
   ])
 }
+
+# Serve every host under apps.example.com, and apps.example.com itself
+# (Pangolin 1.26+).
+resource "pangolin_resource" "apps" {
+  org_id            = pangolin_organization.example.org_id
+  name              = "apps"
+  mode              = "http"
+  domain_id         = pangolin_domain.example.domain_id
+  subdomain         = "*.apps"
+  match_base_domain = true
+}

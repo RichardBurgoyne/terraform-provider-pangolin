@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -90,6 +91,9 @@ type pangolinResourceModel struct {
 	// Update-only http-family fields added in Pangolin 1.25.
 	LoadBalancingStrategy  types.String `tfsdk:"load_balancing_strategy"`
 	ForwardIdentityHeaders types.Bool   `tfsdk:"forward_identity_headers"`
+
+	// http mode only, added in Pangolin 1.26.
+	MatchBaseDomain types.Bool `tfsdk:"match_base_domain"`
 }
 
 func (r *pangolinResourceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -193,6 +197,12 @@ func (r *pangolinResourceResource) Schema(ctx context.Context, req resource.Sche
 				Description: "Whether to send the authenticated user's identity to the backend in the Remote-User, Remote-Email, Remote-Name, Remote-Role and Remote-User-Id headers. Requires Pangolin 1.25 or later. Update-only: not settable at creation. Not valid for tcp/udp resources.",
 			},
 
+			"match_base_domain": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "With a wildcard subdomain, also serve the domain the wildcard sits under, so `*.apps` on example.com also answers apps.example.com. Requires Pangolin 1.26 or later and a plan that includes wildcard subdomains. Only valid when mode is http and subdomain starts with `*`.",
+			},
+
 			"ai_providers": schema.ListNestedAttribute{
 				Optional:    true,
 				Description: "AI providers to attach to an inference-mode resource. Providers must already exist in Pangolin (this provider does not manage them). Only valid when mode is inference.",
@@ -284,6 +294,13 @@ func (r *pangolinResourceResource) ValidateConfig(ctx context.Context, req resou
 			resp.Diagnostics.AddAttributeError(path.Root(a.name), "Invalid attribute for mode "+mode, fmt.Sprintf("%s is only valid for raw tcp/udp resources, not mode %q.", a.name, mode))
 		}
 	}
+	if known(config.MatchBaseDomain) && config.MatchBaseDomain.ValueBool() {
+		if mode != "http" {
+			resp.Diagnostics.AddAttributeError(path.Root("match_base_domain"), "Invalid attribute for mode "+mode, fmt.Sprintf("match_base_domain is only valid when mode is \"http\", not %q.", mode))
+		} else if known(config.Subdomain) && !strings.HasPrefix(config.Subdomain.ValueString(), "*") {
+			resp.Diagnostics.AddAttributeError(path.Root("match_base_domain"), "Wildcard subdomain required", "match_base_domain needs a wildcard subdomain, one that starts with \"*\".")
+		}
+	}
 	if mode != "inference" && hasAIProviders {
 		resp.Diagnostics.AddAttributeError(path.Root("ai_providers"), "Invalid attribute for mode "+mode, fmt.Sprintf("ai_providers is only valid when mode is \"inference\", not %q.", mode))
 	}
@@ -355,6 +372,9 @@ func (r *pangolinResourceResource) Create(ctx context.Context, req resource.Crea
 		in.PamMode = plan.PamMode.ValueString()
 		in.AuthDaemonMode = plan.AuthDaemonMode.ValueString()
 		in.AuthDaemonPort = int64Ptr(plan.AuthDaemonPort)
+		if mode == "http" {
+			in.MatchBaseDomain = boolPtr(plan.MatchBaseDomain)
+		}
 		if mode == "inference" {
 			attachments, diags := aiProvidersFromPlan(ctx, plan.AIProviders)
 			resp.Diagnostics.Append(diags...)
@@ -515,6 +535,9 @@ func (r *pangolinResourceResource) Update(ctx context.Context, req resource.Upda
 			in.AuthDaemonMode = &v
 		}
 		in.AuthDaemonPort = int64Ptr(plan.AuthDaemonPort)
+		if mode == "http" {
+			in.MatchBaseDomain = boolPtr(plan.MatchBaseDomain)
+		}
 		resp.Diagnostics.Append(setUpdateOnlyFields(&in, &plan)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -613,6 +636,11 @@ func setPangolinResourceModelFromAPI(model *pangolinResourceModel, res *client.P
 	}
 	model.Enabled = types.BoolValue(res.Enabled)
 	model.SSL = types.BoolValue(res.SSL)
+	if res.Mode == "http" {
+		model.MatchBaseDomain = types.BoolValue(res.MatchBaseDomain)
+	} else {
+		model.MatchBaseDomain = types.BoolNull()
+	}
 
 	if isRawMode(res.Mode) {
 		if res.ProxyPort != 0 {
