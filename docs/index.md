@@ -17,7 +17,7 @@ With it you can describe a [Pangolin](https://github.com/fosrl/pangolin) deploym
 
 - Terraform 1.0 or later, or OpenTofu 1.6 or later.
 - A Pangolin instance (self-hosted or cloud) with the [Integration API](https://docs.pangolin.net/manage/integration-api) enabled. The provider talks to this API, not to the web UI.
-- The provider is tested against Pangolin 1.25. Some resources and attributes need a recent server and say so in their description (for example `pangolin_redirect` and `load_balancing_strategy` need 1.25).
+- The provider is tested against Pangolin 1.26. Some resources and attributes need a recent server and say so in their description (for example `pangolin_custom_dns_record` and `match_base_domain` need 1.26).
 
 ### 2. Create an API key
 
@@ -128,11 +128,11 @@ Most resources support `terraform import`; the exact ID format is at the bottom 
 
 | Area | Resources |
 |---|---|
-| Organization | `pangolin_organization`, `pangolin_domain` |
+| Organization | `pangolin_organization`, `pangolin_domain`, `pangolin_custom_dns_record` |
 | Connectivity | `pangolin_site` |
 | Public resources | `pangolin_resource`, `pangolin_target`, `pangolin_resource_rule`, `pangolin_resource_mtls`, `pangolin_redirect` |
 | Private resources | `pangolin_private_resource` |
-| Access | `pangolin_role`, `pangolin_user`, `pangolin_role_resource_grant`, `pangolin_user_resource_grant`, `pangolin_client_role` |
+| Access | `pangolin_idp_oidc`, `pangolin_role`, `pangolin_user`, `pangolin_role_resource_grant`, `pangolin_user_resource_grant`, `pangolin_client_role` |
 | Organizing | `pangolin_label`, `pangolin_label_attachment` |
 | Automation | `pangolin_api_key` |
 | AI gateway | `pangolin_ai_provider` |
